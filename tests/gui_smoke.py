@@ -40,7 +40,7 @@ def key(k):xd('key','--clearmodifiers',k);time.sleep(.4)
 def navigate(uri):key('ctrl+l');xd('type','--clearmodifiers','--delay','1',uri);key('Return')
 def state():return json.loads((pathlib.Path(env['XDG_STATE_HOME'])/'nagi/state.json').read_text())
 try:
-    window=wait_for(lambda:xd('search','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
+    window=wait_for(lambda:xd('search','--onlyvisible','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
     wait_for(lambda:any(v['url']==url for v in state()['history']))
     key('ctrl+d');wait_for(lambda:any(v['url']==url for v in state()['bookmarks']))
     key('ctrl+f');xd('type','quiet-water');key('Escape')
@@ -56,7 +56,7 @@ try:
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
     saved=state();assert len(saved['bookmarks'])==1
     p=subprocess.Popen([str(BINARY)],env=env,stdout=log,stderr=log)
-    window=wait_for(lambda:xd('search','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
+    window=wait_for(lambda:xd('search','--onlyvisible','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
     time.sleep(1);assert state()['tabs']==saved['tabs']
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
     result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen'],'profile':profile.name}

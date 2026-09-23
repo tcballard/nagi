@@ -99,8 +99,10 @@ mod tests {
         {
             let w = Writer::new(path.clone());
             for i in 0..100 {
-                let mut s = State::default();
-                s.active = i;
+                let s = State {
+                    active: i,
+                    ..State::default()
+                };
                 w.save(s);
             }
         }

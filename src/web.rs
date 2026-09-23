@@ -344,6 +344,8 @@ impl Browser {
         ));
     }
     pub fn compile_filter(self: &Rc<Self>) {
+        let generation = self.filter_generation.get() + 1;
+        self.filter_generation.set(generation);
         let state = self.state.borrow();
         let mut rules = vec![];
         if state.settings.block {
@@ -387,6 +389,9 @@ impl Browser {
             gio::Cancellable::NONE,
             move |result| {
                 if let Some(b) = weak.upgrade() {
+                    if b.filter_generation.get() != generation {
+                        return;
+                    }
                     match result {
                         Ok(filter) => {
                             *b.filter.borrow_mut() = Some(filter);

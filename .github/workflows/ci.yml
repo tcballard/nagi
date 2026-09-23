@@ -20,13 +20,15 @@ jobs:
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - run: cargo fmt --check
       - run: cargo test --locked
       - run: cargo build --locked
       - name: Validate desktop launcher
         run: desktop-file-validate packaging/io.github.tcballard.Nagi.desktop
       - name: Exercise real browser with local fixtures
-        run: dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' python3 tests/gui_smoke.py
+        run: xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
       - name: Compile release
         run: cargo build --locked --release
       - name: Package runnable Linux build
@@ -34,6 +36,7 @@ jobs:
           mkdir -p dist/nagi-linux-x86_64
           cp target/release/nagi README.md LICENSE CREDITS.md dist/nagi-linux-x86_64/
           cp -r packaging assets dist/nagi-linux-x86_64/
+          cp scripts/install-binary.sh dist/nagi-linux-x86_64/install.sh
           tar -C dist -czf dist/nagi-linux-x86_64.tar.gz nagi-linux-x86_64
           sha256sum dist/nagi-linux-x86_64.tar.gz > dist/SHA256SUMS
       - name: Upload build and screenshots
@@ -46,3 +49,32 @@ jobs:
             dist/SHA256SUMS
             target/evidence/
           if-no-files-found: warn
+  arch-package:
+    runs-on: ubuntu-24.04
+    container: archlinux:base-devel
+    timeout-minutes: 30
+    steps:
+      - name: Install Arch build dependencies
+        run: pacman -Syu --noconfirm --needed git rust pkgconf gtk4 webkitgtk-6.0
+      - uses: actions/checkout@v4
+      - name: Prepare immutable local source package
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          scripts/prepare-package.sh
+          useradd -m builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+      - name: Build and test package as an ordinary user
+        run: runuser -u builder -- bash -c 'cd "$1/dist" && makepkg --noconfirm' _ "$GITHUB_WORKSPACE"
+      - name: Inspect package
+        run: |
+          pacman -Qip dist/*.pkg.tar.zst
+          pacman -Qlp dist/*.pkg.tar.zst
+          sha256sum dist/*.pkg.tar.zst > dist/ARCH-SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nagi-arch-x86_64
+          path: |
+            dist/*.pkg.tar.zst
+            dist/ARCH-SHA256SUMS
+            dist/nagi-*.tar.gz
+            dist/PKGBUILD

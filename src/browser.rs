@@ -53,6 +53,7 @@ pub struct Browser {
     pub session: webkit::NetworkSession,
     pub filter: RefCell<Option<webkit::UserContentFilter>>,
     pub filter_ready: Cell<bool>,
+    pub filter_generation: Cell<u64>,
     pub pending: RefCell<Vec<(glib::WeakRef<webkit::WebView>, String)>>,
     pub downloads: RefCell<Vec<Rc<DownloadRow>>>,
     pub palette: RefCell<theme::Palette>,
@@ -105,7 +106,7 @@ impl Browser {
         strip_line.add_css_class("tab-strip");
         strip_line.set_margin_start(8);
         strip_line.set_margin_end(8);
-        let brand = label("凪", "");
+        let brand = label("NAGI", "eyebrow");
         brand.set_tooltip_text(Some("Nagi — a quiet browser"));
         brand.set_margin_end(8);
         strip_line.append(&brand);
@@ -239,6 +240,7 @@ impl Browser {
             session,
             filter: RefCell::new(None),
             filter_ready: Cell::new(false),
+            filter_generation: Cell::new(0),
             pending: RefCell::new(vec![]),
             downloads: RefCell::new(vec![]),
             palette: RefCell::new(palette),
@@ -871,6 +873,15 @@ impl Browser {
                 if let Some(t) = self.tab() {
                     let pinned = t.page.borrow().pinned;
                     t.page.borrow_mut().pinned = !pinned;
+                    self.tabs
+                        .borrow_mut()
+                        .sort_by_key(|tab| !tab.page.borrow().pinned);
+                    let mut previous: Option<gtk::Box> = None;
+                    for tab in self.tabs.borrow().iter() {
+                        self.strip
+                            .reorder_child_after(&tab.button, previous.as_ref());
+                        previous = Some(tab.button.clone());
+                    }
                     self.dirty.set(true);
                     self.update_chrome();
                 }
