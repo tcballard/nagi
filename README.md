@@ -15,11 +15,11 @@ native tabs, bookmarks and a reading view; keep your history and settings on
 your own machine. It uses GTK4 and the system WebKitGTK engine, and follows
 Omarchy's current colours. Inspired by [Search](https://github.com/driceroland/Search).
 
-**Try v0.0.1 on x86_64 Omarchy / Arch:**
+**Try v0.0.2 on x86_64 Omarchy / Arch:**
 
 ```sh
-curl -fLO https://github.com/tcballard/nagi/releases/download/v0.0.1/nagi-0.0.1-1-x86_64.pkg.tar.zst
-sudo pacman -U ./nagi-0.0.1-1-x86_64.pkg.tar.zst
+curl -fLO https://github.com/tcballard/nagi/releases/download/v0.0.2/nagi-0.0.2-1-x86_64.pkg.tar.zst
+sudo pacman -U ./nagi-0.0.2-1-x86_64.pkg.tar.zst
 nagi
 ```
 
@@ -48,7 +48,7 @@ shows a local test page on Ubuntu/Xvfb, with the bookmarks panel open.
 
 ## Status
 
-First versioned preview, v0.0.1. See [VERIFICATION.md](VERIFICATION.md)
+Early preview, v0.0.2. See [VERIFICATION.md](VERIFICATION.md)
 for the exact builds and runtime checks performed. Intended target: Omarchy 4
 on Hyprland. Live acceptance on an Omarchy machine is still required.
 

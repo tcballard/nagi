@@ -1,6 +1,6 @@
 # Local release source recipe. Generate with scripts/prepare-package.sh.
 pkgname=nagi
-pkgver=0.0.1
+pkgver=0.0.2
 pkgrel=1
 pkgdesc='A quiet native browser for Omarchy'
 arch=('x86_64' 'aarch64')

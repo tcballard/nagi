@@ -1,14 +1,18 @@
-# Verification — Nagi v0.0.1
+# Verification — Nagi v0.0.2
 
 Target: Omarchy 4 / Hyprland. An actual Omarchy desktop has not been exercised.
 This is an early versioned preview; see the release notes for feature limits.
 
-## Local and automated checks
+## Icon update
+
+[PR #1's workflow](https://github.com/tcballard/nagi/actions/runs/35920157957) passed at `5474d89f79e45bd23006a493ac4f23aacf6d4e72`: approved icon pixel checks, all nine installed sizes through GTK lookup, symbolic discovery, browser smoke tests, and Arch packaging/install/removal. The v0.0.2 release workflow repeats these checks on its own target before publication.
+
+## Original browser checks
 
 The tested source is available at [the v0.0.1 workflow run](https://github.com/tcballard/nagi/actions/runs/35917741980). Its source revision is `57a18bf403911c6e46b23a083fa2e1ad7a34046d`. The release workflow rebuilds and tests the tagged target before publishing assets.
 
 - Locally on Ubuntu 24.04 x86_64: Rust 1.98.1, GTK 4.14.5, WebKitGTK 2.52.3; `cargo fmt --check`, `cargo test --locked` (six core tests), `cargo clippy --locked --all-targets -- -D warnings`, `cargo build --release --locked`, `nagi --version` and `desktop-file-validate` pass.
-- The CI GUI smoke test launches the real GTK/WebKit browser under Xvfb with WebKit's sandbox enabled. It renders a local HTTP page, saves a bookmark, invokes find and reading view, excludes private navigation from saved records, reopens a tab, saves a download via GTK's file dialog, quits, reopens and compares saved tabs. [Test screenshot](docs/ci-browser.png) is from an earlier passing run of the same functional source, captured on Ubuntu X11/Xvfb with a local fixture. It is not an Omarchy screenshot.
+- The CI GUI smoke test launches the real GTK/WebKit browser under Xvfb with WebKit's sandbox enabled. It renders a local HTTP page, saves a bookmark, invokes find and reading view, excludes private navigation from saved records, reopens a tab, saves a download via GTK's file dialog, quits, reopens and compares saved tabs. [Test screenshot](docs/ci-browser.png) is from the original browser run, before the icon update, captured on Ubuntu X11/Xvfb with a local fixture. It is not an Omarchy screenshot.
 - Arch Linux container: the workflow generates a source tarball from the commit and a PKGBUILD with its actual SHA-256; `makepkg` runs the locked build and tests as an ordinary user; the package is inspected, installed with pacman, reports the correct version, supplies the desktop file, then is removed. This is an Arch container check, not a clean chroot or a live Omarchy install.
 
 The local workspace cannot create a desktop socket, so it cannot launch the browser's GUI here. CI provides the runtime evidence above. Check the linked workflow's final result for the exact source revision; a partial job is not a pass.

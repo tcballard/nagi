@@ -1,20 +1,18 @@
-Nagi is a quiet native browser for Omarchy, built with Rust, GTK4 and WebKitGTK.
+Nagi v0.0.2 brings the approved moon-and-horizon icon into the browser and desktop launcher.
 
-This first versioned preview includes tabs, session restoration, private browsing,
-bookmarks, local history, downloads, reading view, element hiding and basic
-tracker blocking. It follows Omarchy's theme and provides a desktop launcher.
+- Native small-size artwork and nine PNG exports from 16 to 512px.
+- A symbolic icon that follows panel text colour.
+- Updated tab, welcome-page, window and reading-view icons.
+- Complete hicolor installation and cleanup for Arch packages and user-local installs.
 
-**Install on Omarchy / Arch:** download `nagi-0.0.1-1-x86_64.pkg.tar.zst` and run:
+Install or upgrade on x86_64 Omarchy / Arch:
 
 ```sh
-sudo pacman -U ./nagi-0.0.1-1-x86_64.pkg.tar.zst
+curl -fLO https://github.com/tcballard/nagi/releases/download/v0.0.2/nagi-0.0.2-1-x86_64.pkg.tar.zst
+sudo pacman -U ./nagi-0.0.2-1-x86_64.pkg.tar.zst
 nagi
 ```
 
-The package build and install/removal checks run in an Arch container. Desktop
-smoke checks run the sandboxed WebKit browser on Ubuntu with Xvfb and local test
-pages. Real Omarchy/Hyprland desktop acceptance is still outstanding.
+The release workflow gates publication on icon pixel checks, GTK icon lookup, actual browser workflows under Ubuntu/Xvfb, and an Arch package build/install/remove check. SHA-256 files accompany the downloads.
 
-This is not yet a Chrome/Firefox replacement: extensions, a password vault,
-passkeys, sync and guaranteed DRM playback are not included. Keep system
-WebKitGTK updated through pacman. The app does not change your default browser.
+The icon uses the static Tokyo Night palette. Real Omarchy/Hyprland acceptance remains outstanding. Browsing data is preserved on upgrade. This is still an early preview; extensions, a password vault, passkeys, sync and guaranteed DRM playback are not included.

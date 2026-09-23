@@ -24,4 +24,4 @@ Internal native new tabs and reading-view tabs show the 16px family mark. The we
 
 ## Platform acceptance
 
-The build environment is Ubuntu 24.04, not an installed Omarchy system. Theme-aware icon syncing is therefore deliberately omitted; all artwork uses the approved static Tokyo Night palette. No theme hook or user configuration is installed. Real Omarchy launcher comparison against other installed browsers and Wayland window-icon display remain device acceptance checks. The existing v0.0.1 release is unchanged by this branch.
+The build environment is Ubuntu 24.04, not an installed Omarchy system. Theme-aware icon syncing is therefore deliberately omitted; all artwork uses the approved static Tokyo Night palette. No theme hook or user configuration is installed. Real Omarchy launcher comparison against other installed browsers and Wayland window-icon display remain device acceptance checks. The icon ships in v0.0.2; the earlier v0.0.1 assets remain available unchanged.

@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the verified v0.0.1 release
+        description: Publish the verified v0.0.2 release
         type: boolean
         default: false
 permissions:
@@ -113,9 +113,9 @@ jobs:
           pattern: nagi-*
           merge-multiple: true
           path: release-artifacts
-      - name: Publish v0.0.1
+      - name: Publish v0.0.2
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mapfile -d '' files < <(find release-artifacts -type f \( -name '*.pkg.tar.zst' -o -name '*.tar.gz' -o -name '*SHA256SUMS' \) -print0)
-          gh release create v0.0.1 --target "$GITHUB_SHA" --prerelease --title "Nagi v0.0.1" --notes-file RELEASE_NOTES.md "${files[@]}"
+          gh release create v0.0.2 --target "$GITHUB_SHA" --prerelease --title "Nagi v0.0.2" --notes-file RELEASE_NOTES.md "${files[@]}"
