@@ -2,6 +2,8 @@
 
 # Nagi
 
+<img src="assets/icons/hicolor/64x64/apps/nagi.png" width="64" height="64" alt="Nagi: moon above a flat horizon with its reflection">
+
 **A little quieter on Omarchy.**
 
 <a href="https://github.com/tcballard/omarchy-badges"><img src="https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-app.svg" height="20" alt="Omarchy App"></a>
@@ -152,3 +154,5 @@ changing versions. Restore your previous default browser using `xdg-settings`
 if you chose to change it.
 
 [Architecture](ARCHITECTURE.md) · [Credits](CREDITS.md) · [MIT licence](LICENSE)
+
+[Approved icon and export rules](docs/icon-design.md)

@@ -11,6 +11,8 @@ env=os.environ.copy()
 for name,folder in [('XDG_CONFIG_HOME','config'),('XDG_DATA_HOME','data'),('XDG_STATE_HOME','state'),('XDG_CACHE_HOME','cache')]:
     env[name]=str(pathlib.Path(profile.name)/folder)
 env['GDK_BACKEND']='x11'
+subprocess.run([str(ROOT/'scripts/install-icons.sh'),str(pathlib.Path(env['XDG_DATA_HOME'])/'icons/hicolor')],check=True,env=env)
+subprocess.run(['/usr/bin/python3',str(ROOT/'tests/icon_lookup.py')],check=True,env=env)
 requests=[]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):

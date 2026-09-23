@@ -1,5 +1,6 @@
 mod browser;
 mod core;
+mod icons;
 mod panels;
 mod storage;
 mod theme;

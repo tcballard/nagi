@@ -14,6 +14,7 @@ pub struct Tab {
     pub holder: gtk::Box,
     pub button: gtk::Box,
     pub label: gtk::Label,
+    pub internal_icon: gtk::Image,
     pub reader: Cell<bool>,
     pub failed: Cell<bool>,
     pub picking: Cell<bool>,
@@ -103,6 +104,7 @@ impl Browser {
             .default_height(800)
             .build();
         window.add_css_class("browser");
+        window.set_icon_name(Some("nagi"));
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
         window.set_child(Some(&root));
         let strip_line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
@@ -460,7 +462,12 @@ impl Browser {
         title.set_width_chars(16);
         title.set_xalign(0.0);
         let select_button = gtk::Button::new();
-        select_button.set_child(Some(&title));
+        let tab_content = gtk::Box::new(gtk::Orientation::Horizontal, 6);
+        let internal_icon = crate::icons::image(16);
+        internal_icon.set_visible(uri == "about:blank");
+        tab_content.append(&internal_icon);
+        tab_content.append(&title);
+        select_button.set_child(Some(&tab_content));
         button.append(&select_button);
         let close = icon("window-close-symbolic", "Close tab");
         button.append(&close);
@@ -482,6 +489,7 @@ impl Browser {
             holder,
             button,
             label: title,
+            internal_icon,
             reader: Cell::new(false),
             failed: Cell::new(false),
             picking: Cell::new(false),
@@ -655,6 +663,8 @@ impl Browser {
         }
         for t in self.tabs.borrow().iter() {
             let p = t.page.borrow();
+            t.internal_icon
+                .set_visible(p.url == "about:blank" || t.reader.get());
             t.label.set_text(&format!(
                 "{}{}{}",
                 if t.private { "◌ " } else { "" },
@@ -668,6 +678,7 @@ impl Browser {
         clear(&tab.holder);
         let area = gtk::Box::new(gtk::Orientation::Vertical, 16);
         area.add_css_class("welcome");
+        area.append(&crate::icons::image(64));
         area.set_vexpand(true);
         area.set_halign(gtk::Align::Center);
         area.set_valign(gtk::Align::Center);
