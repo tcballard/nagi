@@ -24,12 +24,12 @@ nagi
 ```
 
 **Preview pending:** an actual Omarchy/Hyprland screenshot will go in `preview.png`
-after on-device testing. This [automated browser capture](docs/ci-browser.png)
-shows a local test page on Ubuntu/Xvfb, with the bookmarks panel open.
+after on-device testing. This [automated browser capture](docs/floating-address.png)
+shows the development floating bar over a local test page on Ubuntu/Xvfb.
 [Verification](VERIFICATION.md) · [Build and configuration](#build-and-run-on-omarchy--arch) ·
 [Keyboard shortcuts](#keyboard) · [Known limits](#status).
 
-![Nagi rendering a local test page with bookmarks on Ubuntu Xvfb](docs/ci-browser.png)
+![Nagi floating address bar over a local test page on Ubuntu Xvfb](docs/floating-address.png)
 
 ## Included
 
@@ -131,7 +131,14 @@ The address bar opens in the centre of the browser over the current page. Press
 address or search and press Enter. Escape or a click outside dismisses it and
 returns focus to the page. New tabs open it automatically. Back/forward, reload,
 site protection, bookmarks and the browser menu sit inside the floating panel.
-These changes are not in the v0.0.2 download above; build this branch to try them.
+These changes are not in the v0.0.2 download above. From an existing checkout:
+
+```sh
+git fetch origin feat/floating-address-bar
+git switch feat/floating-address-bar
+cargo build --release --locked
+./target/release/nagi --focus-address
+```
 
 Super shortcuts are subject to your compositor bindings. The Omarchy `dev`
 bindings inspected at `b9ddccfc377abe0b8fc3ff1ee5b31a86bf202d4a` leave

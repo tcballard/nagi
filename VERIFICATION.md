@@ -11,10 +11,31 @@ fixture checks both shortcuts, Enter navigation, Escape and outside-click
 dismissal with page focus restored, and single-instance `--focus-address`
 without adding a tab. It captures normal and narrow-window layouts.
 
-Current workspace has no GTK/WebKit development environment. New build and
-GUI results must come from this branch's CI; the release results below are
-historical and do not validate this change. Actual Hyprland interception,
-desktop-wide activation, IME and fractional scaling remain untested.
+[Workflow 35930837502](https://github.com/tcballard/nagi/actions/runs/35930837502)
+passed for branch source `750d4909ca5c7465b66afe7b5b3199051de9ad8d`, tested
+through GitHub's merge with unchanged main `dfcbf66d47b528b5a3da2660e6d8880b6d8f84e9`.
+The documentation/screenshots added after this source do not change runtime code.
+
+| Check | Environment | Result |
+| --- | --- | --- |
+| `cargo fmt --check`, `cargo test --locked` | Ubuntu 24.04, Rust 1.98.1 | Exit 0; all six tests passed |
+| `cargo build --locked`, release build | Ubuntu 24.04, system GTK4/WebKitGTK6 | Exit 0 |
+| `tests/gui_smoke.py` under Xvfb/dbus, cairo renderer | Real GTK X11/WebKit with local HTTP fixture | Exit 0; both shortcuts, navigation, focus restoration, CLI reuse and existing browser smoke checks passed |
+| `makepkg`, package install/version/remove | Arch x86_64 container, ordinary build user | Exit 0 |
+| Approved icon pixels, installed GTK lookup, desktop file validation | Ubuntu 24.04 | Exit 0 |
+
+[Normal-window capture](docs/floating-address.png) and
+[520px-wide capture](docs/floating-address-narrow.png) were visually inspected:
+centred panel, complete controls, no panel clipping. These are real CI captures,
+not Omarchy desktop screenshots. SHA-256 respectively:
+`2bf8508f916de16ea81b5fdffc1df90515944b587158d6a7adb3b81b21379fae` and
+`50c37c16bab0bdb2c32696da3a8daf2ea3824b1556142bc683f3390282ae93c7`.
+
+The initial workflow at `ad4bd29` stopped at a rustfmt discrepancy, corrected
+before the passing run above. Local package/toolchain installation was not
+available in the current workspace; no local runtime pass is claimed.
+Actual Hyprland interception, desktop-wide activation, IME, accessibility with
+an active accessibility bus, and fractional scaling remain untested.
 
 Omarchy development binding source inspected at
 `b9ddccfc377abe0b8fc3ff1ee5b31a86bf202d4a`: `config/hypr/bindings.lua`,
