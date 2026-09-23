@@ -54,6 +54,8 @@ pub fn css(p: &Palette) -> String {
         r#"
 window.browser {{ background: {bg}; color: {fg}; }}
 .browser .chrome, .browser .tab-strip {{ background: {bg}; color: {fg}; }}
+.browser .address-card {{ padding: 18px; border: 1px solid alpha({fg},0.20); border-radius: 16px; box-shadow: 0 12px 40px alpha(black,0.30); }}
+.browser button.address-backdrop, .browser button.address-backdrop:hover, .browser button.address-backdrop:active {{ background: alpha(black,0.22); border: none; border-radius: 0; box-shadow: none; }}
 .browser button {{ border-radius: 8px; box-shadow: none; min-height: 26px; }}
 .browser .chrome button, .browser .tab-strip button {{ background: transparent; border: none; color: {fg}; }}
 .browser .chrome button:hover, .browser .tab-strip button:hover {{ background: alpha({fg},0.10); }}

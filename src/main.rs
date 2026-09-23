@@ -14,12 +14,20 @@ fn main() -> gtk::glib::ExitCode {
         return gtk::glib::ExitCode::SUCCESS;
     }
     if args.iter().any(|a| a == "--help") {
-        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [URL ...]\n       nagi --version\n\nCtrl+L address · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
+        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [URL ...]\n       nagi --version\n\nSuper+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
         return gtk::glib::ExitCode::SUCCESS;
     }
     let app = gtk::Application::new(
         Some(core::APP_ID),
         gio::ApplicationFlags::HANDLES_COMMAND_LINE,
+    );
+    app.add_main_option(
+        "focus-address",
+        0u8.into(),
+        gtk::glib::OptionFlags::NONE,
+        gtk::glib::OptionArg::None,
+        "Present Nagi and summon the floating address bar",
+        None,
     );
     app.add_main_option(
         "private",
@@ -41,6 +49,12 @@ fn main() -> gtk::glib::ExitCode {
         let private = cmd
             .options_dict()
             .lookup::<bool>("private")
+            .ok()
+            .flatten()
+            .unwrap_or(false);
+        let focus_address = cmd
+            .options_dict()
+            .lookup::<bool>("focus-address")
             .ok()
             .flatten()
             .unwrap_or(false);
@@ -66,6 +80,9 @@ fn main() -> gtk::glib::ExitCode {
             }
         }
         browser.window.present();
+        if focus_address {
+            browser.show_address();
+        }
         gtk::glib::ExitCode::SUCCESS
     });
     let code = app.run();

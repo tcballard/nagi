@@ -3,7 +3,26 @@
 Target: Omarchy 4 / Hyprland. An actual Omarchy desktop has not been exercised.
 This is an early versioned preview; see the release notes for feature limits.
 
-## Icon update
+## Floating address bar development
+
+Based on v0.0.2 source `dfcbf66d47b528b5a3da2660e6d8880b6d8f84e9`.
+The address/navigation controls now live in a centred GTK overlay. The GUI
+fixture checks both shortcuts, Enter navigation, Escape and outside-click
+dismissal with page focus restored, and single-instance `--focus-address`
+without adding a tab. It captures normal and narrow-window layouts.
+
+Current workspace has no GTK/WebKit development environment. New build and
+GUI results must come from this branch's CI; the release results below are
+historical and do not validate this change. Actual Hyprland interception,
+desktop-wide activation, IME and fractional scaling remain untested.
+
+Omarchy development binding source inspected at
+`b9ddccfc377abe0b8fc3ff1ee5b31a86bf202d4a`: `config/hypr/bindings.lua`,
+`default/hypr/bindings/{utilities,tiling-v2,clipboard,media}.lua` and
+`default/hypr/plain-bindings.lua`. Super+Alt+L is unused in those sources;
+the user's installed version and custom bindings have not been inspected.
+
+## Historical icon update
 
 [PR #1's workflow](https://github.com/tcballard/nagi/actions/runs/35920157957) passed at `5474d89f79e45bd23006a493ac4f23aacf6d4e72`: approved icon pixel checks, all nine installed sizes through GTK lookup, symbolic discovery, browser smoke tests, and Arch packaging/install/removal. The v0.0.2 release workflow repeats these checks on its own target before publication.
 

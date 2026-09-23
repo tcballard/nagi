@@ -37,7 +37,11 @@ pub struct Browser {
     pub stack: gtk::Stack,
     pub strip: gtk::Box,
     pub chrome: gtk::Box,
+    root: gtk::Box,
+    address_layer: gtk::Overlay,
+    address_button: gtk::Button,
     pub address: gtk::Entry,
+    address_error: gtk::Label,
     address_focus: gtk::EventControllerFocus,
     pub back: gtk::Button,
     pub forward: gtk::Button,
@@ -106,7 +110,9 @@ impl Browser {
         window.add_css_class("browser");
         window.set_icon_name(Some("nagi"));
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        window.set_child(Some(&root));
+        let overlay = gtk::Overlay::new();
+        overlay.set_child(Some(&root));
+        window.set_child(Some(&overlay));
         let strip_line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
         strip_line.add_css_class("tab-strip");
         strip_line.set_margin_start(8);
@@ -127,23 +133,40 @@ impl Browser {
         strip_line.append(&plus);
         let tabs_button = icon("view-list-symbolic", "Search tabs · Ctrl+K");
         strip_line.append(&tabs_button);
+        let address_button = icon(
+            "system-search-symbolic",
+            "Address / search · Super+Alt+L or Ctrl+L",
+        );
+        strip_line.append(&address_button);
         let controls = gtk::WindowControls::new(gtk::PackType::End);
         strip_line.append(&controls);
         root.append(&strip_line);
-        let chrome = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        let chrome = gtk::Box::new(gtk::Orientation::Vertical, 12);
         chrome.add_css_class("chrome");
-        chrome.set_margin_start(10);
-        chrome.set_margin_end(10);
-        chrome.set_margin_top(3);
-        chrome.set_margin_bottom(8);
+        chrome.add_css_class("address-card");
+        chrome.set_halign(gtk::Align::Center);
+        chrome.set_valign(gtk::Align::Center);
+        chrome.set_margin_start(24);
+        chrome.set_margin_end(24);
+        let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        let title = label("ADDRESS / SEARCH", "eyebrow");
+        title.set_hexpand(true);
+        title.set_xalign(0.0);
+        title_row.append(&title);
+        let close_address = icon("window-close-symbolic", "Close address bar · Escape");
+        title_row.append(&close_address);
+        chrome.append(&title_row);
+        let navigation = gtk::Box::new(gtk::Orientation::Horizontal, 5);
         let back = icon("go-previous-symbolic", "Back · Alt+Left");
         let forward = icon("go-next-symbolic", "Forward · Alt+Right");
         let reload = icon("view-refresh-symbolic", "Reload · Ctrl+R");
-        chrome.append(&back);
-        chrome.append(&forward);
-        chrome.append(&reload);
+        navigation.append(&back);
+        navigation.append(&forward);
+        navigation.append(&reload);
         let address = gtk::Entry::builder()
             .placeholder_text("Search or enter an address")
+            .width_chars(1)
+            .max_width_chars(60)
             .hexpand(true)
             .build();
         address.set_icon_from_icon_name(
@@ -153,16 +176,34 @@ impl Browser {
         let address_focus = gtk::EventControllerFocus::new();
         address.add_controller(address_focus.clone());
         chrome.append(&address);
+        let address_error = label("", "muted");
+        address_error.set_wrap(true);
+        address_error.set_visible(false);
+        chrome.append(&address_error);
         let shield = icon("security-high-symbolic", "Site protection");
         let star = icon("non-starred-symbolic", "Bookmark this page · Ctrl+D");
         let menu = gtk::MenuButton::builder()
             .icon_name("open-menu-symbolic")
             .tooltip_text("Browser menu")
             .build();
-        chrome.append(&shield);
-        chrome.append(&star);
-        chrome.append(&menu);
-        root.append(&chrome);
+        let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
+        spacer.set_hexpand(true);
+        navigation.append(&spacer);
+        navigation.append(&shield);
+        navigation.append(&star);
+        navigation.append(&menu);
+        chrome.append(&navigation);
+        chrome.append(&label("Enter to go · Esc to return to the page", "muted"));
+        let address_layer = gtk::Overlay::new();
+        let backdrop = gtk::Button::new();
+        backdrop.add_css_class("address-backdrop");
+        backdrop.set_focusable(false);
+        backdrop.set_hexpand(true);
+        backdrop.set_vexpand(true);
+        address_layer.set_child(Some(&backdrop));
+        address_layer.add_overlay(&chrome);
+        address_layer.set_visible(false);
+        overlay.add_overlay(&address_layer);
         let progress = gtk::ProgressBar::new();
         root.append(&progress);
         let notification = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -230,7 +271,11 @@ impl Browser {
             stack,
             strip,
             chrome,
+            root,
+            address_layer,
+            address_button,
             address,
+            address_error,
             address_focus,
             back,
             forward,
@@ -262,6 +307,20 @@ impl Browser {
         b.apply_appearance();
         b.setup_downloads(&b.session);
         b.compile_filter();
+        let weak = Rc::downgrade(&b);
+        b.address_button.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.show_address();
+            }
+        });
+        for button in [backdrop, close_address] {
+            let weak = Rc::downgrade(&b);
+            button.connect_clicked(move |_| {
+                if let Some(b) = weak.upgrade() {
+                    b.dismiss_address();
+                }
+            });
+        }
         let weak = Rc::downgrade(&b);
         plus.connect_clicked(move |_| {
             if let Some(b) = weak.upgrade() {
@@ -523,6 +582,7 @@ impl Browser {
         tab
     }
     pub fn select(self: &Rc<Self>, id: u64) {
+        self.dismiss_address();
         self.active.set(id);
         self.close_find();
         let Some(tab) = self.tab() else { return };
@@ -546,7 +606,7 @@ impl Browser {
         self.update_chrome();
         self.dirty.set(true);
         if tab.page.borrow().url == "about:blank" {
-            self.address.grab_focus();
+            self.show_address();
         } else if let Some(v) = tab.view.borrow().as_ref() {
             v.grab_focus();
         }
@@ -556,6 +616,7 @@ impl Browser {
         match result {
             Ok(uri) => {
                 let Some(tab) = self.tab() else { return };
+                self.dismiss_address();
                 tab.reader.set(false);
                 tab.failed.set(false);
                 tab.page.borrow_mut().url = uri.clone();
@@ -576,7 +637,14 @@ impl Browser {
                 }
                 self.dirty.set(true);
             }
-            Err(e) => self.notice(&e),
+            Err(e) => {
+                if self.address_layer.is_visible() {
+                    self.address_error.set_text(&e);
+                    self.address_error.set_visible(true);
+                } else {
+                    self.notice(&e);
+                }
+            }
         }
     }
     pub fn close_tab(self: &Rc<Self>, id: u64) {
@@ -608,6 +676,10 @@ impl Browser {
     pub fn update_chrome(&self) {
         let Some(tab) = self.tab() else { return };
         let page = tab.page.borrow();
+        self.address_button.set_tooltip_text(Some(&format!(
+            "{}\nAddress / search · Super+Alt+L or Ctrl+L",
+            page.url
+        )));
         if !self.address_focus.contains_focus() {
             self.address.set_text(if page.url == "about:blank" {
                 ""
@@ -731,7 +803,7 @@ impl Browser {
         }
         area.append(&links);
         let hint = label(
-            "Ctrl+L  address     Ctrl+T  new tab     Ctrl+K  find a tab",
+            "Super+Alt+L / Ctrl+L  address     Ctrl+T  new tab",
             "muted",
         );
         hint.set_margin_top(24);
@@ -744,6 +816,37 @@ impl Browser {
             if let Some(f) = v.find_controller() {
                 f.search_finish();
             }
+        }
+    }
+    pub fn show_address(&self) {
+        // Never replace an in-progress edit when the shortcut is pressed again.
+        if !self.address_layer.is_visible() {
+            self.address_error.set_visible(false);
+            if let Some(tab) = self.tab() {
+                let page = tab.page.borrow();
+                self.address.set_text(if page.url == "about:blank" {
+                    ""
+                } else {
+                    &page.url
+                });
+            }
+            self.chrome.set_visible(true);
+            self.root.set_sensitive(false);
+            self.address_layer.set_visible(true);
+        }
+        self.address.grab_focus();
+        self.address.select_region(0, -1);
+    }
+    pub fn dismiss_address(&self) {
+        if !self.address_layer.is_visible() {
+            return;
+        }
+        self.address_layer.set_visible(false);
+        self.root.set_sensitive(true);
+        if let Some(v) = self.view() {
+            v.grab_focus();
+        } else {
+            self.address_button.grab_focus();
         }
     }
     pub fn apply_appearance(&self) {
@@ -763,7 +866,7 @@ impl Browser {
             ("private", vec!["<Control><Shift>n"]),
             ("close", vec!["<Control>w"]),
             ("reopen", vec!["<Control><Shift>t"]),
-            ("address", vec!["<Control>l"]),
+            ("address", vec!["<Control>l", "<Super><Alt>l"]),
             ("tabs", vec!["<Control>k"]),
             ("history", vec!["<Control>h"]),
             ("bookmarks", vec!["<Control>b"]),
@@ -801,6 +904,9 @@ impl Browser {
         }
     }
     pub fn command(self: &Rc<Self>, name: &str) {
+        if name != "address" && name != "escape" {
+            self.dismiss_address();
+        }
         match name {
             "new" => {
                 self.new_tab("about:blank", false, true);
@@ -809,10 +915,7 @@ impl Browser {
                 self.new_tab("about:blank", true, true);
             }
             "close" => self.close_tab(self.active.get()),
-            "address" => {
-                self.address.grab_focus();
-                self.address.select_region(0, -1);
-            }
+            "address" => self.show_address(),
             "reopen" => {
                 let p = self.closed.borrow_mut().pop();
                 if let Some(p) = p {
@@ -868,6 +971,10 @@ impl Browser {
                 }
             }
             "escape" => {
+                if self.address_layer.is_visible() {
+                    self.dismiss_address();
+                    return;
+                }
                 self.close_find();
                 self.panel.set_visible(false);
                 if self.window.is_fullscreen() {
@@ -929,6 +1036,7 @@ impl Browser {
         let menu = gio::Menu::new();
         for items in [
             vec![
+                ("Address / search", "address"),
                 ("New tab", "new"),
                 ("New private tab", "private"),
                 ("Reopen closed tab", "reopen"),

@@ -154,6 +154,7 @@ impl Browser {
         view.connect_enter_fullscreen(move |_| {
             if let Some(b) = weak.upgrade() {
                 b.window.fullscreen();
+                b.dismiss_address();
                 b.chrome.set_visible(false);
             }
             false

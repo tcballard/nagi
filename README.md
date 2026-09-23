@@ -33,7 +33,7 @@ shows a local test page on Ubuntu/Xvfb, with the bookmarks panel open.
 
 ## Included
 
-- Address and search field, back/forward, reload/stop and zoom.
+- Floating address/search panel with back/forward, reload/stop, protection and bookmarks.
 - Tabs, pinned tabs, duplicate, mute, reopen closed tabs and a searchable tab list.
 - Session restoration; background restored tabs load when selected.
 - Private tabs with separate ephemeral website storage.
@@ -104,7 +104,8 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 
 | Action | Shortcut |
 |---|---|
-| Address / search | Ctrl+L |
+| Floating address / search | Super+Alt+L or Ctrl+L |
+| Dismiss floating bar | Escape or click outside |
 | New / close tab | Ctrl+T / Ctrl+W |
 | Reopen closed tab | Ctrl+Shift+T |
 | Private tab | Ctrl+Shift+N |
@@ -122,6 +123,33 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 | Fullscreen | F11 |
 
 Omarchy's Super+W closes the window. Ctrl+W closes the current tab.
+
+### Floating address bar (development branch)
+
+The address bar opens in the centre of the browser over the current page. Press
+**Super+Alt+L** or **Ctrl+L**, or click the search icon beside the tabs. Type an
+address or search and press Enter. Escape or a click outside dismisses it and
+returns focus to the page. New tabs open it automatically. Back/forward, reload,
+site protection, bookmarks and the browser menu sit inside the floating panel.
+These changes are not in the v0.0.2 download above; build this branch to try them.
+
+Super shortcuts are subject to your compositor bindings. The Omarchy `dev`
+bindings inspected at `b9ddccfc377abe0b8fc3ff1ee5b31a86bf202d4a` leave
+Super+Alt+L unused; Super+L changes layout and Super+Ctrl+L locks the system.
+Local custom bindings may differ. Ctrl+L always remains an app shortcut.
+
+For an optional desktop-wide shortcut that also presents Nagi, the current
+Omarchy Lua configuration accepts this in `~/.config/hypr/bindings.lua`:
+
+```lua
+o.bind("SUPER + ALT + L", "Nagi address / search", "nagi --focus-address")
+```
+
+Use an absolute executable path if `nagi` is not on your session PATH. This
+command reuses Nagi's existing window, without adding a tab, or starts Nagi if
+it is closed. Nagi does not install or overwrite any compositor binding. Older
+Hyprland configurations using `.conf` instead of Lua require their own binding
+syntax. This integration still needs a live Omarchy/Hyprland check.
 
 ## Data and privacy
 
