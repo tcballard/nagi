@@ -28,7 +28,14 @@ jobs:
       - name: Validate desktop launcher
         run: desktop-file-validate packaging/io.github.tcballard.Nagi.desktop
       - name: Exercise real browser with local fixtures
-        run: xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
+        # Ubuntu's runner policy otherwise prevents WebKit from creating its
+        # process sandbox. Allow namespaces on this disposable VM only; never
+        # disable WebKit's sandbox or change the user's machine.
+        run: |
+          previous=$(sysctl -n kernel.apparmor_restrict_unprivileged_userns)
+          trap 'sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns="$previous"' EXIT
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
       - name: Compile release
         run: cargo build --locked --release
       - name: Package runnable Linux build

@@ -70,7 +70,9 @@ pub fn icon(name: &str, tip: &str) -> gtk::Button {
 }
 pub fn label(text: &str, class: &str) -> gtk::Label {
     let l = gtk::Label::new(Some(text));
-    l.add_css_class(class);
+    if !class.is_empty() {
+        l.add_css_class(class);
+    }
     l
 }
 pub fn clear(b: &gtk::Box) {

@@ -11,8 +11,10 @@ env=os.environ.copy()
 for name,folder in [('XDG_CONFIG_HOME','config'),('XDG_DATA_HOME','data'),('XDG_STATE_HOME','state'),('XDG_CACHE_HOME','cache')]:
     env[name]=str(pathlib.Path(profile.name)/folder)
 env['GDK_BACKEND']='x11'
+requests=[]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
+        requests.append(self.path)
         if self.path=='/download':
             body=b'Nagi download fixture.\n';self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Disposition','attachment; filename="nagi-test.txt"')
         else:
@@ -44,13 +46,22 @@ try:
     wait_for(lambda:any(v['url']==url for v in state()['history']))
     key('ctrl+d');wait_for(lambda:any(v['url']==url for v in state()['bookmarks']))
     key('ctrl+f');xd('type','quiet-water');key('Escape')
-    key('ctrl+shift+r');time.sleep(1);key('ctrl+shift+r')
-    key('ctrl+shift+n');navigate(url+'private-secret');time.sleep(1)
+    key('ctrl+shift+r');time.sleep(1);subprocess.run(['import','-window','root',str(OUT/'nagi-reader.png')],check=True,env=env);key('ctrl+shift+r')
+    key('ctrl+shift+n');navigate(url+'private-secret');wait_for(lambda:'/private-secret' in requests);time.sleep(1)
     assert not any('private-secret' in v['url'] for v in state()['history'])
     assert not any('private-secret' in v['url'] for v in state()['tabs'])
     key('ctrl+w');key('ctrl+t');navigate(url+'second')
     wait_for(lambda:any(v['url']==url+'second' for v in state()['history']))
     key('ctrl+w');key('ctrl+shift+t');wait_for(lambda:any(v['url']==url+'second' for v in state()['tabs']))
+    # Exercise the real save dialog and WebKit download lifecycle.
+    navigate(url+'download')
+    dialog=wait_for(lambda:xd('search','--onlyvisible','--name','Save download').splitlines()[0])
+    xd('windowfocus',dialog);key('ctrl+l')
+    destination=pathlib.Path(profile.name)/'download.txt'
+    xd('type','--clearmodifiers',str(destination));key('Return')
+    wait_for(lambda:destination.exists() and destination.read_bytes()==b'Nagi download fixture.\n')
+    xd('windowfocus',window);key('Escape')
+    navigate(url);wait_for(lambda:any(v['url']==url for v in state()['history']))
     key('ctrl+b');subprocess.run(['import','-window','root',str(OUT/'nagi-browser.png')],check=True,env=env);key('Escape')
     key('ctrl+t');subprocess.run(['import','-window','root',str(OUT/'nagi-welcome.png')],check=True,env=env)
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
@@ -59,8 +70,9 @@ try:
     window=wait_for(lambda:xd('search','--onlyvisible','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
     time.sleep(1);assert state()['tabs']==saved['tabs']
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
-    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen'],'profile':profile.name}
+    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
     (OUT/'gui-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 finally:
+    subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)
     if p.poll() is None:p.terminate();p.wait(timeout=10)
     server.shutdown();log.close();profile.cleanup()

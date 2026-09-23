@@ -26,7 +26,6 @@ impl Browser {
         let manager = webkit::UserContentManager::new();
         let settings = webkit::Settings::new();
         settings.set_enable_developer_extras(true);
-        settings.set_enable_hyperlink_auditing(false);
         settings.set_javascript_can_open_windows_automatically(false);
         settings.set_media_playback_requires_user_gesture(true);
         settings.set_enable_fullscreen(true);
@@ -347,6 +346,15 @@ impl Browser {
         let generation = self.filter_generation.get() + 1;
         self.filter_generation.set(generation);
         let state = self.state.borrow();
+        if !state.settings.block {
+            drop(state);
+            self.filter.borrow_mut().take();
+            for tab in self.tabs.borrow().iter() {
+                self.refresh_content(tab);
+            }
+            self.resume_loads();
+            return;
+        }
         let mut rules = vec![];
         if state.settings.block {
             for domain in [
@@ -377,7 +385,6 @@ impl Browser {
                 rules.push(serde_json::json!({"trigger":{"url-filter":".*","if-top-url":[format!("^{}/",site.replace('.',"\\."))]},"action":{"type":"ignore-previous-rules"}}));
             }
         }
-        // WebKit accepts an empty list; no silent fallback to uncompiled rules.
         let bytes = glib::Bytes::from_owned(serde_json::to_vec(&rules).unwrap());
         drop(state);
         let store =
@@ -401,16 +408,19 @@ impl Browser {
                         }
                         Err(e) => b.notice(&format!("Content protection is unavailable: {e}")),
                     };
-                    b.filter_ready.set(true);
-                    let pending = std::mem::take(&mut *b.pending.borrow_mut());
-                    for (v, uri) in pending {
-                        if let Some(v) = v.upgrade() {
-                            v.load_uri(&uri);
-                        }
-                    }
+                    b.resume_loads();
                 }
             },
         );
+    }
+    fn resume_loads(&self) {
+        self.filter_ready.set(true);
+        let pending = std::mem::take(&mut *self.pending.borrow_mut());
+        for (v, uri) in pending {
+            if let Some(v) = v.upgrade() {
+                v.load_uri(&uri);
+            }
+        }
     }
     pub fn reader(self: &Rc<Self>) {
         let Some(tab) = self.tab() else { return };
