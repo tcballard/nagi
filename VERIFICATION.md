@@ -1,9 +1,34 @@
-# Verification — Nagi v0.0.2
+# Verification — Nagi
 
 Target: Omarchy 4 / Hyprland. An actual Omarchy desktop has not been exercised.
 This is an early versioned preview; see the release notes for feature limits.
 
-## Floating address bar development
+## Search composer refinement
+
+Runtime source: `84df0d0a429f5806636d660ad19230a4236358bd`.
+[Workflow 35932049027](https://github.com/tcballard/nagi/actions/runs/35932049027)
+contains the checks for this revision; earlier runs below are historical.
+The Linux job passed: formatting, six Rust tests, debug/release builds, icon and
+desktop validation, and the real GTK/Xvfb fixture. Screenshots were visually
+checked at 1180px and 520px window widths. The final documentation commit does
+not change the tested runtime code.
+
+The floating surface now contains a borderless, larger input and a single
+submit arrow. Navigation, bookmark and site controls moved to the browser menu.
+Super+Alt+L opens an empty search; Ctrl+L selects the current address. Opening a
+URL on startup leaves focus on the page. The visibility state is independent
+of whether the window has been mapped, preventing a startup composer from
+remaining open over a loaded page.
+
+The real GTK/Xvfb smoke test covers initial page focus, both shortcuts,
+Enter and submit-button activation, Escape/outside-click dismissal, single-instance
+activation, narrow layout and the existing browser/session/download checks.
+Fresh captures: [typed search](docs/composer.png), [empty prompt](docs/composer-empty.png),
+[narrow URL editing](docs/composer-narrow.png). These are Ubuntu X11 captures,
+not Omarchy/Hyprland acceptance. Live compositor shortcuts, IME, accessibility
+and fractional scaling remain untested.
+
+## Initial floating address bar (historical)
 
 Based on v0.0.2 source `dfcbf66d47b528b5a3da2660e6d8880b6d8f84e9`.
 The address/navigation controls now live in a centred GTK overlay. The GUI
@@ -62,3 +87,9 @@ The local workspace cannot create a desktop socket, so it cannot launch the brow
 Wayland / Hyprland window identity and portals; Omarchy palette switching with installed themes; fractional scaling, IME, clipboard and multiple monitors; authenticated sites; camera/audio permissions and media playback; package upgrade and removal on the target machine. The `aarch64` recipe is declared but only x86_64 is built here. Content blocking, element hiding and site permissions are implemented but do not yet have live Omarchy acceptance.
 
 For the first device pass: install the release package, launch from the app menu, open several HTTPS pages, switch the current Omarchy theme, try private tabs and a download, quit/reopen to check restore, then uninstall with `sudo pacman -R nagi`. Keep your existing default browser during this pass.
+
+### Composer capture hashes
+
+- `composer.png`: `a6dc17541ac97abad072e37fe4a23456a669c0cb568960fd389d178887279a69`
+- `composer-empty.png`: `d5dadb394e8af945665dc4dca22d3af4de2cfe4a1103c4c05d2eff490ddf6f29`
+- `composer-narrow.png`: `37d2c74b90cb9df22763ac8294e9309431d933867320b1a2685f7a53bf558e05`

@@ -24,12 +24,12 @@ nagi
 ```
 
 **Preview pending:** an actual Omarchy/Hyprland screenshot will go in `preview.png`
-after on-device testing. This [automated browser capture](docs/floating-address.png)
-shows the development floating bar over a local test page on Ubuntu/Xvfb.
+after on-device testing. This [automated browser capture](docs/composer.png)
+shows the development search composer over a local test page on Ubuntu/Xvfb.
 [Verification](VERIFICATION.md) · [Build and configuration](#build-and-run-on-omarchy--arch) ·
 [Keyboard shortcuts](#keyboard) · [Known limits](#status).
 
-![Nagi floating address bar over a local test page on Ubuntu Xvfb](docs/floating-address.png)
+![Nagi search composer over a local test page on Ubuntu Xvfb](docs/composer.png)
 
 ## Included
 
