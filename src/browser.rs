@@ -37,6 +37,7 @@ pub struct Browser {
     pub strip: gtk::Box,
     pub chrome: gtk::Box,
     pub address: gtk::Entry,
+    address_focus: gtk::EventControllerFocus,
     pub back: gtk::Button,
     pub forward: gtk::Button,
     pub reload: gtk::Button,
@@ -147,6 +148,8 @@ impl Browser {
             gtk::EntryIconPosition::Primary,
             Some("system-search-symbolic"),
         );
+        let address_focus = gtk::EventControllerFocus::new();
+        address.add_controller(address_focus.clone());
         chrome.append(&address);
         let shield = icon("security-high-symbolic", "Site protection");
         let star = icon("non-starred-symbolic", "Bookmark this page · Ctrl+D");
@@ -226,6 +229,7 @@ impl Browser {
             strip,
             chrome,
             address,
+            address_focus,
             back,
             forward,
             reload,
@@ -548,7 +552,8 @@ impl Browser {
                 tab.failed.set(false);
                 tab.page.borrow_mut().url = uri.clone();
                 if uri == "about:blank" {
-                    if let Some(v) = tab.view.borrow_mut().take() {
+                    let removed = tab.view.borrow_mut().take();
+                    if let Some(v) = removed {
                         v.stop_loading();
                         tab.holder.remove(&v);
                     }
@@ -577,7 +582,8 @@ impl Browser {
                 closed.remove(0);
             }
         }
-        if let Some(v) = tab.view.borrow_mut().take() {
+        let removed = tab.view.borrow_mut().take();
+        if let Some(v) = removed {
             v.stop_loading();
             tab.holder.remove(&v);
         }
@@ -594,7 +600,7 @@ impl Browser {
     pub fn update_chrome(&self) {
         let Some(tab) = self.tab() else { return };
         let page = tab.page.borrow();
-        if !self.address.has_focus() {
+        if !self.address_focus.contains_focus() {
             self.address.set_text(if page.url == "about:blank" {
                 ""
             } else {
@@ -856,7 +862,12 @@ impl Browser {
                 if self.window.is_fullscreen() {
                     self.window.unfullscreen();
                 }
+                self.chrome.set_visible(true);
+                if let Some(tab) = self.tab() {
+                    tab.picking.set(false);
+                }
                 if let Some(v) = self.view() {
+                    v.evaluate_javascript("window.__nagiCancelPick?.(); if(document.fullscreenElement) document.exitFullscreen();", Some("nagi"), None, gio::Cancellable::NONE, |_| {});
                     v.stop_loading();
                     v.grab_focus();
                 }

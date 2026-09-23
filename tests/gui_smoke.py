@@ -46,7 +46,7 @@ try:
     wait_for(lambda:any(v['url']==url for v in state()['history']))
     key('ctrl+d');wait_for(lambda:any(v['url']==url for v in state()['bookmarks']))
     key('ctrl+f');xd('type','quiet-water');key('Escape')
-    key('ctrl+shift+r');time.sleep(1);subprocess.run(['import','-window','root',str(OUT/'nagi-reader.png')],check=True,env=env);key('ctrl+shift+r')
+    key('ctrl+shift+r');time.sleep(1);subprocess.run(['import','-window',window,str(OUT/'nagi-reader.png')],check=True,env=env);key('ctrl+shift+r')
     key('ctrl+shift+n');navigate(url+'private-secret');wait_for(lambda:'/private-secret' in requests);time.sleep(1)
     assert not any('private-secret' in v['url'] for v in state()['history'])
     assert not any('private-secret' in v['url'] for v in state()['tabs'])
@@ -62,8 +62,8 @@ try:
     wait_for(lambda:destination.exists() and destination.read_bytes()==b'Nagi download fixture.\n')
     xd('windowfocus',window);key('Escape')
     navigate(url);wait_for(lambda:any(v['url']==url for v in state()['history']))
-    key('ctrl+b');subprocess.run(['import','-window','root',str(OUT/'nagi-browser.png')],check=True,env=env);key('Escape')
-    key('ctrl+t');subprocess.run(['import','-window','root',str(OUT/'nagi-welcome.png')],check=True,env=env)
+    key('ctrl+b');subprocess.run(['import','-window',window,str(OUT/'nagi-browser.png')],check=True,env=env);key('Escape')
+    key('ctrl+t');subprocess.run(['import','-window',window,str(OUT/'nagi-welcome.png')],check=True,env=env)
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
     saved=state();assert len(saved['bookmarks'])==1
     p=subprocess.Popen([str(BINARY)],env=env,stdout=log,stderr=log)

@@ -4,6 +4,11 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+    inputs:
+      publish:
+        description: Publish the verified release candidate
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -77,6 +82,11 @@ jobs:
           pacman -Qip dist/*.pkg.tar.zst
           pacman -Qlp dist/*.pkg.tar.zst
           sha256sum dist/*.pkg.tar.zst > dist/ARCH-SHA256SUMS
+          pacman -U --noconfirm dist/*.pkg.tar.zst
+          nagi --version
+          test -f /usr/share/applications/io.github.tcballard.Nagi.desktop
+          pacman -R --noconfirm nagi
+          test ! -e /usr/bin/nagi
       - uses: actions/upload-artifact@v4
         with:
           name: nagi-arch-x86_64
@@ -85,3 +95,23 @@ jobs:
             dist/ARCH-SHA256SUMS
             dist/nagi-*.tar.gz
             dist/PKGBUILD
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish
+    needs: [linux, arch-package]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: nagi-*
+          merge-multiple: true
+          path: release-artifacts
+      - name: Publish immutable release candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -d '' files < <(find release-artifacts -type f \( -name '*.pkg.tar.zst' -o -name '*.tar.gz' -o -name '*SHA256SUMS' \) -print0)
+          gh release create v0.1.0-rc.1 --target "$GITHUB_SHA" --prerelease --title "Nagi 0.1.0 RC1" --notes-file RELEASE_NOTES.md "${files[@]}"

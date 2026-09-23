@@ -433,7 +433,7 @@ impl Browser {
         let weak = Rc::downgrade(self);
         let wt = Rc::downgrade(&tab);
         let source = tab.page.borrow().url.clone();
-        v.evaluate_javascript(r#"(()=>{const a=document.querySelector('article')||document.querySelector('main')||document.body;if(!a)return '';const c=a.cloneNode(true);c.querySelectorAll('nav,aside,footer,header,script,style,form,button,[role="navigation"]').forEach(e=>e.remove());return JSON.stringify({title:document.title,text:c.textContent});})()"#,Some("nagi"),None,gio::Cancellable::NONE,move |result|{
+        v.evaluate_javascript(r#"(()=>{const a=document.querySelector('article')||document.querySelector('main')||document.body;if(!a)return '';const c=a.cloneNode(true);c.querySelectorAll('nav,aside,footer,header,script,style,form,button,[role="navigation"]').forEach(e=>e.remove());const heading=c.querySelector('h1');const title=heading?.textContent||document.title;heading?.remove();c.querySelectorAll('p,li,h2,h3,h4,blockquote,pre').forEach(e=>e.append(document.createTextNode('\n\n')));return JSON.stringify({title,text:c.textContent});})()"#,Some("nagi"),None,gio::Cancellable::NONE,move |result|{
             let (Some(b),Some(t))=(weak.upgrade(),wt.upgrade())else{return};if t.page.borrow().url!=source{return;}
             if let Ok(value)=result{if let Ok(article)=serde_json::from_str::<serde_json::Value>(&value.to_str()){
                 let text=article["text"].as_str().unwrap_or("");if text.trim().len()<100{b.notice("There is not enough article text on this page for reading view.");return;}

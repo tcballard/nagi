@@ -73,7 +73,7 @@ window.browser {{ background: {bg}; color: {fg}; }}
 .browser .welcome {{ padding: 40px; }}
 .browser .welcome button {{ background: alpha({fg},0.06); color: {fg}; border: 1px solid alpha({fg},0.10); padding: 12px 22px; }}
 .browser progressbar trough {{ min-height: 2px; border: none; background: transparent; }}
-.browser progressbar progress {{ background: {accent}; border: none; min-height: 2px; }}
+.browser progressbar progress {{ background: {accent}; border: none; min-height: 2px; min-width: 0; margin: 0; padding: 0; }}
 .browser .notice {{ background: {surface}; padding: 8px 14px; }}
 .browser .status {{ font-size: 11px; padding: 3px 10px; opacity: 0.75; }}
 "#,
