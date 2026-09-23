@@ -42,11 +42,6 @@ pub struct Browser {
     address_button: gtk::Button,
     pub address: gtk::Entry,
     address_error: gtk::Label,
-    pub back: gtk::Button,
-    pub forward: gtk::Button,
-    pub reload: gtk::Button,
-    pub shield: gtk::Button,
-    pub star: gtk::Button,
     pub progress: gtk::ProgressBar,
     pub status: gtk::Label,
     pub panel: gtk::Box,
@@ -137,6 +132,11 @@ impl Browser {
             "Address / search · Super+Alt+L or Ctrl+L",
         );
         strip_line.append(&address_button);
+        let menu = gtk::MenuButton::builder()
+            .icon_name("open-menu-symbolic")
+            .tooltip_text("Browser menu")
+            .build();
+        strip_line.append(&menu);
         let controls = gtk::WindowControls::new(gtk::PackType::End);
         strip_line.append(&controls);
         root.append(&strip_line);
@@ -147,50 +147,30 @@ impl Browser {
         chrome.set_valign(gtk::Align::Center);
         chrome.set_margin_start(24);
         chrome.set_margin_end(24);
-        let title_row = gtk::Box::new(gtk::Orientation::Horizontal, 8);
-        let title = label("ADDRESS / SEARCH", "eyebrow");
-        title.set_hexpand(true);
-        title.set_xalign(0.0);
-        title_row.append(&title);
-        let close_address = icon("window-close-symbolic", "Close address bar · Escape");
-        title_row.append(&close_address);
-        chrome.append(&title_row);
-        let navigation = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-        let back = icon("go-previous-symbolic", "Back · Alt+Left");
-        let forward = icon("go-next-symbolic", "Forward · Alt+Right");
-        let reload = icon("view-refresh-symbolic", "Reload · Ctrl+R");
-        navigation.append(&back);
-        navigation.append(&forward);
-        navigation.append(&reload);
         let address = gtk::Entry::builder()
-            .placeholder_text("Search or enter an address")
+            .placeholder_text("What are you looking for?")
             .width_chars(1)
-            .max_width_chars(60)
+            .max_width_chars(56)
             .hexpand(true)
             .build();
-        address.set_icon_from_icon_name(
-            gtk::EntryIconPosition::Primary,
-            Some("system-search-symbolic"),
-        );
+        address.add_css_class("composer-input");
+        address.set_tooltip_text(Some("Search the web or enter a URL"));
         chrome.append(&address);
         let address_error = label("", "muted");
         address_error.set_wrap(true);
         address_error.set_visible(false);
         chrome.append(&address_error);
-        let shield = icon("security-high-symbolic", "Site protection");
-        let star = icon("non-starred-symbolic", "Bookmark this page · Ctrl+D");
-        let menu = gtk::MenuButton::builder()
-            .icon_name("open-menu-symbolic")
-            .tooltip_text("Browser menu")
-            .build();
-        let spacer = gtk::Box::new(gtk::Orientation::Horizontal, 0);
-        spacer.set_hexpand(true);
-        navigation.append(&spacer);
-        navigation.append(&shield);
-        navigation.append(&star);
-        navigation.append(&menu);
-        chrome.append(&navigation);
-        chrome.append(&label("Enter to go · Esc to return to the page", "muted"));
+        let footer = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        let hint = label("Search or paste a link · Esc to close", "composer-hint");
+        hint.set_hexpand(true);
+        hint.set_xalign(0.0);
+        hint.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        footer.append(&hint);
+        let submit = icon("go-up-symbolic", "Go · Enter");
+        submit.add_css_class("composer-submit");
+        submit.set_sensitive(false);
+        footer.append(&submit);
+        chrome.append(&footer);
         let address_layer = gtk::Overlay::new();
         let backdrop = gtk::Button::new();
         backdrop.add_css_class("address-backdrop");
@@ -273,11 +253,6 @@ impl Browser {
             address_button,
             address,
             address_error,
-            back,
-            forward,
-            reload,
-            shield,
-            star,
             progress,
             status,
             panel,
@@ -306,17 +281,24 @@ impl Browser {
         let weak = Rc::downgrade(&b);
         b.address_button.connect_clicked(move |_| {
             if let Some(b) = weak.upgrade() {
-                b.show_address();
+                b.show_search();
             }
         });
-        for button in [backdrop, close_address] {
-            let weak = Rc::downgrade(&b);
-            button.connect_clicked(move |_| {
-                if let Some(b) = weak.upgrade() {
-                    b.dismiss_address();
-                }
-            });
-        }
+        let weak = Rc::downgrade(&b);
+        backdrop.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.dismiss_address();
+            }
+        });
+        let weak = Rc::downgrade(&b);
+        submit.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.navigate(&b.address.text());
+            }
+        });
+        b.address.connect_changed(move |entry| {
+            submit.set_sensitive(!entry.text().trim().is_empty());
+        });
         let weak = Rc::downgrade(&b);
         plus.connect_clicked(move |_| {
             if let Some(b) = weak.upgrade() {
@@ -334,49 +316,6 @@ impl Browser {
             if let Some(b) = weak.upgrade() {
                 let input = entry.text().to_string();
                 b.navigate(&input);
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.back.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| {
-                b.dismiss_address();
-                b.view()
-            }) {
-                v.go_back();
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.forward.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| {
-                b.dismiss_address();
-                b.view()
-            }) {
-                v.go_forward();
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.reload.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| {
-                b.dismiss_address();
-                b.view()
-            }) {
-                if v.is_loading() {
-                    v.stop_loading();
-                } else {
-                    v.reload();
-                }
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.star.connect_clicked(move |_| {
-            if let Some(b) = weak.upgrade() {
-                b.bookmark();
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.shield.connect_clicked(move |_| {
-            if let Some(b) = weak.upgrade() {
-                b.show_panel("Site");
             }
         });
         let weak = Rc::downgrade(&b);
@@ -611,7 +550,7 @@ impl Browser {
         self.update_chrome();
         self.dirty.set(true);
         if tab.page.borrow().url == "about:blank" {
-            self.show_address();
+            self.show_search();
         } else if let Some(v) = tab.view.borrow().as_ref() {
             v.grab_focus();
         }
@@ -697,45 +636,13 @@ impl Browser {
             if tab.private { "Private · " } else { "" },
             page.title
         )));
-        self.address.set_icon_from_icon_name(
-            gtk::EntryIconPosition::Primary,
-            Some(if tab.private {
-                "view-conceal-symbolic"
-            } else if page.url.starts_with("https://") && !tab.failed.get() {
-                "channel-secure-symbolic"
-            } else {
-                "dialog-information-symbolic"
-            }),
-        );
-        self.star.set_icon_name(
-            if self
-                .state
-                .borrow()
-                .bookmarks
-                .iter()
-                .any(|p| p.url == page.url)
-            {
-                "starred-symbolic"
-            } else {
-                "non-starred-symbolic"
-            },
-        );
         if let Some(v) = tab.view.borrow().as_ref() {
-            self.back.set_sensitive(v.can_go_back());
-            self.forward.set_sensitive(v.can_go_forward());
             self.progress.set_fraction(if v.is_loading() {
                 v.estimated_load_progress()
             } else {
                 0.0
             });
-            self.reload.set_icon_name(if v.is_loading() {
-                "process-stop-symbolic"
-            } else {
-                "view-refresh-symbolic"
-            });
         } else {
-            self.back.set_sensitive(false);
-            self.forward.set_sensitive(false);
             self.progress.set_fraction(0.0);
         }
         for t in self.tabs.borrow().iter() {
@@ -820,6 +727,13 @@ impl Browser {
             }
         }
     }
+    pub fn show_search(&self) {
+        let was_open = self.address_layer.is_visible();
+        self.show_address();
+        if !was_open {
+            self.address.set_text("");
+        }
+    }
     pub fn show_address(&self) {
         // Never replace an in-progress edit when the shortcut is pressed again.
         if !self.address_layer.is_visible() {
@@ -868,7 +782,10 @@ impl Browser {
             ("private", vec!["<Control><Shift>n"]),
             ("close", vec!["<Control>w"]),
             ("reopen", vec!["<Control><Shift>t"]),
-            ("address", vec!["<Control>l", "<Super><Alt>l"]),
+            ("address", vec!["<Control>l"]),
+            ("search", vec!["<Super><Alt>l"]),
+            ("site", vec![]),
+            ("stop", vec![]),
             ("tabs", vec!["<Control>k"]),
             ("history", vec!["<Control>h"]),
             ("bookmarks", vec!["<Control>b"]),
@@ -906,7 +823,7 @@ impl Browser {
         }
     }
     pub fn command(self: &Rc<Self>, name: &str) {
-        if name != "address" && name != "escape" {
+        if name != "address" && name != "search" && name != "escape" {
             self.dismiss_address();
         }
         match name {
@@ -918,6 +835,13 @@ impl Browser {
             }
             "close" => self.close_tab(self.active.get()),
             "address" => self.show_address(),
+            "search" => self.show_search(),
+            "site" => self.show_panel("Site"),
+            "stop" => {
+                if let Some(v) = self.view() {
+                    v.stop_loading();
+                }
+            }
             "reopen" => {
                 let p = self.closed.borrow_mut().pop();
                 if let Some(p) = p {
@@ -1038,10 +962,19 @@ impl Browser {
         let menu = gio::Menu::new();
         for items in [
             vec![
-                ("Address / search", "address"),
+                ("Search the web", "search"),
+                ("Edit address", "address"),
                 ("New tab", "new"),
                 ("New private tab", "private"),
                 ("Reopen closed tab", "reopen"),
+            ],
+            vec![
+                ("Back", "back"),
+                ("Forward", "forward"),
+                ("Reload", "reload"),
+                ("Stop loading", "stop"),
+                ("Site information / protection", "site"),
+                ("Bookmark this page", "bookmark"),
             ],
             vec![
                 ("Find a tab", "tabs"),

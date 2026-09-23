@@ -81,7 +81,7 @@ fn main() -> gtk::glib::ExitCode {
         }
         browser.window.present();
         if focus_address {
-            browser.show_address();
+            browser.show_search();
         }
         gtk::glib::ExitCode::SUCCESS
     });

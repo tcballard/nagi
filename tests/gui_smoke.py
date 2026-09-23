@@ -54,7 +54,9 @@ try:
         wait_for(lambda:requests.count('/focus-check')>count)
     key('super+alt+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-address.png')],check=True,env=env)
-    xd('type','--clearmodifiers',url+'cancelled');key('Escape')
+    xd('type','--clearmodifiers','quiet places to read')
+    subprocess.run(['import','-window',window,str(OUT/'nagi-composer.png')],check=True,env=env)
+    key('ctrl+a');xd('type','--clearmodifiers',url+'cancelled');key('Escape')
     assert_page_focus();assert '/cancelled' not in requests
     key('ctrl+l');xd('type','--clearmodifiers',url+'overlay-navigation');key('Return')
     wait_for(lambda:'/overlay-navigation' in requests);assert_page_focus()
@@ -63,7 +65,7 @@ try:
     subprocess.run([str(BINARY),'--focus-address'],env=env,check=True,timeout=10)
     time.sleep(.4)
     assert len(xd('search','--onlyvisible','--name','Nagi').splitlines())==1
-    xd('type','--clearmodifiers',url+'remote-summon');key('Return')
+    xd('type','--clearmodifiers',url+'remote-summon');key('Tab');key('Return')
     wait_for(lambda:'/remote-summon' in requests)
     assert len(state()['tabs'])==before
     # Outside click dismisses; a narrow window still exposes the controls.

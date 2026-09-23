@@ -33,7 +33,7 @@ shows the development floating bar over a local test page on Ubuntu/Xvfb.
 
 ## Included
 
-- Floating address/search panel with back/forward, reload/stop, protection and bookmarks.
+- Chat-style search composer with a single submit control; browser actions in the menu.
 - Tabs, pinned tabs, duplicate, mute, reopen closed tabs and a searchable tab list.
 - Session restoration; background restored tabs load when selected.
 - Private tabs with separate ephemeral website storage.
@@ -104,7 +104,7 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 
 | Action | Shortcut |
 |---|---|
-| Floating address / search | Super+Alt+L or Ctrl+L |
+| New search / edit current address | Super+Alt+L / Ctrl+L |
 | Dismiss floating bar | Escape or click outside |
 | New / close tab | Ctrl+T / Ctrl+W |
 | Reopen closed tab | Ctrl+Shift+T |
@@ -127,10 +127,12 @@ Omarchy's Super+W closes the window. Ctrl+W closes the current tab.
 ### Floating address bar (development branch)
 
 The address bar opens in the centre of the browser over the current page. Press
-**Super+Alt+L** or **Ctrl+L**, or click the search icon beside the tabs. Type an
-address or search and press Enter. Escape or a click outside dismisses it and
-returns focus to the page. New tabs open it automatically. Back/forward, reload,
-site protection, bookmarks and the browser menu sit inside the floating panel.
+**Super+Alt+L**, or click the search icon beside the tabs, for an empty composer.
+**Ctrl+L** selects the current URL for editing. Type an address or search and
+press Enter or use the send arrow. Escape or a click outside returns focus to
+the page. New tabs open the composer automatically. Back/forward, reload/stop,
+site information, protection and bookmarks are in the menu beside the tabs.
+The composer searches the web; it does not send prompts to an AI service.
 These changes are not in the v0.0.2 download above. From an existing checkout:
 
 ```sh
