@@ -106,7 +106,9 @@ impl Browser {
         let weak = Rc::downgrade(self);
         let wt = Rc::downgrade(tab);
         view.connect_load_failed(move |_, _, uri, error| {
-            if error.matches(webkit::NetworkError::Cancelled) {
+            if error.matches(webkit::NetworkError::Cancelled)
+                || error.matches(webkit::PolicyError::FrameLoadInterruptedByPolicyChange)
+            {
                 return true;
             }
             if let (Some(b), Some(t)) = (weak.upgrade(), wt.upgrade()) {

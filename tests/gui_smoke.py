@@ -56,7 +56,7 @@ try:
     # Exercise the real save dialog and WebKit download lifecycle.
     navigate(url+'download')
     dialog=wait_for(lambda:xd('search','--onlyvisible','--name','Save download').splitlines()[0])
-    xd('windowfocus',dialog);key('ctrl+l')
+    xd('windowfocus',dialog);key('ctrl+l');key('ctrl+a')
     destination=pathlib.Path(profile.name)/'download.txt'
     xd('type','--clearmodifiers',str(destination));key('Return')
     wait_for(lambda:destination.exists() and destination.read_bytes()==b'Nagi download fixture.\n')
@@ -75,4 +75,5 @@ try:
 finally:
     subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)
     if p.poll() is None:p.terminate();p.wait(timeout=10)
+    (OUT/'profile-files.json').write_text(json.dumps([str(f.relative_to(profile.name)) for f in pathlib.Path(profile.name).rglob('*') if f.is_file()],indent=2))
     server.shutdown();log.close();profile.cleanup()
