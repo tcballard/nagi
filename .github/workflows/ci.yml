@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the verified release candidate
+        description: Publish the verified v0.0.1 release
         type: boolean
         default: false
 permissions:
@@ -109,7 +109,7 @@ jobs:
           pattern: nagi-*
           merge-multiple: true
           path: release-artifacts
-      - name: Publish immutable release candidate
+      - name: Publish v0.0.1
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
