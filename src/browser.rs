@@ -42,7 +42,6 @@ pub struct Browser {
     address_button: gtk::Button,
     pub address: gtk::Entry,
     address_error: gtk::Label,
-    address_focus: gtk::EventControllerFocus,
     pub back: gtk::Button,
     pub forward: gtk::Button,
     pub reload: gtk::Button,
@@ -173,8 +172,6 @@ impl Browser {
             gtk::EntryIconPosition::Primary,
             Some("system-search-symbolic"),
         );
-        let address_focus = gtk::EventControllerFocus::new();
-        address.add_controller(address_focus.clone());
         chrome.append(&address);
         let address_error = label("", "muted");
         address_error.set_wrap(true);
@@ -276,7 +273,6 @@ impl Browser {
             address_button,
             address,
             address_error,
-            address_focus,
             back,
             forward,
             reload,
@@ -342,19 +338,28 @@ impl Browser {
         });
         let weak = Rc::downgrade(&b);
         b.back.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| b.view()) {
+            if let Some(v) = weak.upgrade().and_then(|b| {
+                b.dismiss_address();
+                b.view()
+            }) {
                 v.go_back();
             }
         });
         let weak = Rc::downgrade(&b);
         b.forward.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| b.view()) {
+            if let Some(v) = weak.upgrade().and_then(|b| {
+                b.dismiss_address();
+                b.view()
+            }) {
                 v.go_forward();
             }
         });
         let weak = Rc::downgrade(&b);
         b.reload.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| b.view()) {
+            if let Some(v) = weak.upgrade().and_then(|b| {
+                b.dismiss_address();
+                b.view()
+            }) {
                 if v.is_loading() {
                     v.stop_loading();
                 } else {
@@ -680,7 +685,7 @@ impl Browser {
             "{}\nAddress / search · Super+Alt+L or Ctrl+L",
             page.url
         )));
-        if !self.address_focus.contains_focus() {
+        if !self.address_layer.is_visible() {
             self.address.set_text(if page.url == "about:blank" {
                 ""
             } else {
@@ -802,10 +807,7 @@ impl Browser {
             links.append(&btn);
         }
         area.append(&links);
-        let hint = label(
-            "Super+Alt+L / Ctrl+L  address     Ctrl+T  new tab",
-            "muted",
-        );
+        let hint = label("Super+Alt+L / Ctrl+L  address     Ctrl+T  new tab", "muted");
         hint.set_margin_top(24);
         area.append(&hint);
         tab.holder.append(&area);
