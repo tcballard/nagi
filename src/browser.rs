@@ -582,7 +582,7 @@ impl Browser {
                 self.dirty.set(true);
             }
             Err(e) => {
-                if self.address_layer.is_visible() {
+                if self.address_layer.get_visible() {
                     self.address_error.set_text(&e);
                     self.address_error.set_visible(true);
                 } else {
@@ -624,7 +624,7 @@ impl Browser {
             "{}\nAddress / search · Super+Alt+L or Ctrl+L",
             page.url
         )));
-        if !self.address_layer.is_visible() {
+        if !self.address_layer.get_visible() {
             self.address.set_text(if page.url == "about:blank" {
                 ""
             } else {
@@ -728,13 +728,13 @@ impl Browser {
         }
     }
     pub fn show_search(&self) {
-        if !self.address_layer.is_visible() {
+        if !self.address_layer.get_visible() {
             self.address.set_text("");
         }
         self.focus_composer();
     }
     pub fn show_address(&self) {
-        if !self.address_layer.is_visible() {
+        if !self.address_layer.get_visible() {
             if let Some(tab) = self.tab() {
                 let page = tab.page.borrow();
                 self.address.set_text(if page.url == "about:blank" {
@@ -755,7 +755,7 @@ impl Browser {
         self.address.select_region(0, -1);
     }
     pub fn dismiss_address(&self) {
-        if !self.address_layer.is_visible() {
+        if !self.address_layer.get_visible() {
             return;
         }
         self.address_layer.set_visible(false);
@@ -898,7 +898,7 @@ impl Browser {
                 }
             }
             "escape" => {
-                if self.address_layer.is_visible() {
+                if self.address_layer.get_visible() {
                     self.dismiss_address();
                     return;
                 }

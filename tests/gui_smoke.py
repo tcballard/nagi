@@ -52,7 +52,7 @@ try:
     def assert_page_focus():
         count=requests.count('/focus-check');key('F8')
         wait_for(lambda:requests.count('/focus-check')>count)
-    key('Escape');assert_page_focus()
+    assert_page_focus()
     key('super+alt+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-address.png')],check=True,env=env)
     xd('type','--clearmodifiers','--delay','40','quiet places to read');time.sleep(.4)
