@@ -728,16 +728,13 @@ impl Browser {
         }
     }
     pub fn show_search(&self) {
-        let was_open = self.address_layer.is_visible();
-        self.show_address();
-        if !was_open {
+        if !self.address_layer.is_visible() {
             self.address.set_text("");
         }
+        self.focus_composer();
     }
     pub fn show_address(&self) {
-        // Never replace an in-progress edit when the shortcut is pressed again.
         if !self.address_layer.is_visible() {
-            self.address_error.set_visible(false);
             if let Some(tab) = self.tab() {
                 let page = tab.page.borrow();
                 self.address.set_text(if page.url == "about:blank" {
@@ -746,10 +743,14 @@ impl Browser {
                     &page.url
                 });
             }
-            self.chrome.set_visible(true);
-            self.root.set_sensitive(false);
-            self.address_layer.set_visible(true);
         }
+        self.focus_composer();
+    }
+    fn focus_composer(&self) {
+        self.address_error.set_visible(false);
+        self.chrome.set_visible(true);
+        self.root.set_sensitive(false);
+        self.address_layer.set_visible(true);
         self.address.grab_focus();
         self.address.select_region(0, -1);
     }
