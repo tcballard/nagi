@@ -1,0 +1,6 @@
+/target/
+/dist/
+*.pkg.tar.zst
+*.src.tar.gz
+/src-build/
+/pkg/
