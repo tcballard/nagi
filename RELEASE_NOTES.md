@@ -1,13 +1,13 @@
 Nagi is a quiet native browser for Omarchy, built with Rust, GTK4 and WebKitGTK.
 
-This first release candidate includes tabs, session restoration, private browsing,
+This first versioned preview includes tabs, session restoration, private browsing,
 bookmarks, local history, downloads, reading view, element hiding and basic
 tracker blocking. It follows Omarchy's theme and provides a desktop launcher.
 
-**Install on Omarchy / Arch:** download `nagi-0.1.0-1-x86_64.pkg.tar.zst` and run:
+**Install on Omarchy / Arch:** download `nagi-0.0.1-1-x86_64.pkg.tar.zst` and run:
 
 ```sh
-sudo pacman -U ./nagi-0.1.0-1-x86_64.pkg.tar.zst
+sudo pacman -U ./nagi-0.0.1-1-x86_64.pkg.tar.zst
 nagi
 ```
 

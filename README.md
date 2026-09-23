@@ -1,13 +1,31 @@
+<div align="center">
+
 # Nagi
+
+**A little quieter on Omarchy.**
 
 <a href="https://github.com/tcballard/omarchy-badges"><img src="https://raw.githubusercontent.com/tcballard/omarchy-badges/75975e5b5bf75e7ede3764bcd2950046f7abfe2c/badges/v1/omarchy-app.svg" height="20" alt="Omarchy App"></a>
 
-A quiet native browser for Omarchy. Your tabs, your page, and room to think.
+</div>
 
-Nagi is a standalone Rust + GTK4 browser using the system WebKitGTK engine.
-It follows Omarchy's colours, keeps its records locally, and supports both
-mouse and keyboard use. Inspired by [Search](https://github.com/driceroland/Search)
-by Office Commun.
+Nagi is a desktop browser for Omarchy that keeps the page in focus. Browse with
+native tabs, bookmarks and a reading view; keep your history and settings on
+your own machine. It uses GTK4 and the system WebKitGTK engine, and follows
+Omarchy's current colours. Inspired by [Search](https://github.com/driceroland/Search).
+
+**Try v0.0.1 on x86_64 Omarchy / Arch:**
+
+```sh
+curl -fLO https://github.com/tcballard/nagi/releases/download/v0.0.1/nagi-0.0.1-1-x86_64.pkg.tar.zst
+sudo pacman -U ./nagi-0.0.1-1-x86_64.pkg.tar.zst
+nagi
+```
+
+**Preview pending:** an actual Omarchy/Hyprland screenshot will go in `preview.png`
+after on-device testing. The [Ubuntu test capture and results](VERIFICATION.md)
+show the browser running with a local page fixture; they are not an Omarchy
+screenshot. [Build and configuration](#build-and-run-on-omarchy--arch) ·
+[Keyboard shortcuts](#keyboard) · [Known limits](#status).
 
 ## Included
 
@@ -26,7 +44,7 @@ by Office Commun.
 
 ## Status
 
-First release candidate, version 0.1.0. See [VERIFICATION.md](VERIFICATION.md)
+First versioned preview, v0.0.1. See [VERIFICATION.md](VERIFICATION.md)
 for the exact builds and runtime checks performed. Intended target: Omarchy 4
 on Hyprland. Live acceptance on an Omarchy machine is still required.
 

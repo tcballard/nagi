@@ -50,7 +50,7 @@ jobs:
           cp -r packaging assets dist/nagi-linux-x86_64/
           cp scripts/install-binary.sh dist/nagi-linux-x86_64/install.sh
           tar -C dist -czf dist/nagi-linux-x86_64.tar.gz nagi-linux-x86_64
-          sha256sum dist/nagi-linux-x86_64.tar.gz > dist/SHA256SUMS
+          (cd dist && sha256sum nagi-linux-x86_64.tar.gz > SHA256SUMS)
       - name: Upload build and screenshots
         if: always()
         uses: actions/upload-artifact@v4
@@ -81,7 +81,7 @@ jobs:
         run: |
           pacman -Qip dist/*.pkg.tar.zst
           pacman -Qlp dist/*.pkg.tar.zst
-          sha256sum dist/*.pkg.tar.zst > dist/ARCH-SHA256SUMS
+          (cd dist && sha256sum ./*.pkg.tar.zst > ARCH-SHA256SUMS)
           pacman -U --noconfirm dist/*.pkg.tar.zst
           nagi --version
           test -f /usr/share/applications/io.github.tcballard.Nagi.desktop
@@ -114,4 +114,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mapfile -d '' files < <(find release-artifacts -type f \( -name '*.pkg.tar.zst' -o -name '*.tar.gz' -o -name '*SHA256SUMS' \) -print0)
-          gh release create v0.1.0-rc.1 --target "$GITHUB_SHA" --prerelease --title "Nagi 0.1.0 RC1" --notes-file RELEASE_NOTES.md "${files[@]}"
+          gh release create v0.0.1 --target "$GITHUB_SHA" --prerelease --title "Nagi v0.0.1" --notes-file RELEASE_NOTES.md "${files[@]}"
