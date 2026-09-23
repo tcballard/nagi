@@ -20,13 +20,15 @@ jobs:
       - name: Install native dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev pkg-config xvfb xauth dbus-x11 xdotool imagemagick desktop-file-utils
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev pkg-config xvfb xauth dbus-x11 xdotool imagemagick desktop-file-utils python3-pil python3-gi
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
+      - name: Validate approved icon pixels
+        run: python3 tests/icons.py
       - run: cargo fmt --check
       - run: cargo test --locked
       - run: cargo build --locked
@@ -48,6 +50,8 @@ jobs:
           mkdir -p dist/nagi-linux-x86_64
           cp target/release/nagi README.md LICENSE CREDITS.md dist/nagi-linux-x86_64/
           cp -r packaging assets dist/nagi-linux-x86_64/
+          mkdir -p dist/nagi-linux-x86_64/scripts
+          cp scripts/install-icons.sh dist/nagi-linux-x86_64/scripts/
           cp scripts/install-binary.sh dist/nagi-linux-x86_64/install.sh
           tar -C dist -czf dist/nagi-linux-x86_64.tar.gz nagi-linux-x86_64
           (cd dist && sha256sum nagi-linux-x86_64.tar.gz > SHA256SUMS)
