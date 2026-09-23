@@ -22,10 +22,12 @@ nagi
 ```
 
 **Preview pending:** an actual Omarchy/Hyprland screenshot will go in `preview.png`
-after on-device testing. The [Ubuntu test capture and results](VERIFICATION.md)
-show the browser running with a local page fixture; they are not an Omarchy
-screenshot. [Build and configuration](#build-and-run-on-omarchy--arch) ·
+after on-device testing. This [automated browser capture](docs/ci-browser.png)
+shows a local test page on Ubuntu/Xvfb, with the bookmarks panel open.
+[Verification](VERIFICATION.md) · [Build and configuration](#build-and-run-on-omarchy--arch) ·
 [Keyboard shortcuts](#keyboard) · [Known limits](#status).
+
+![Nagi rendering a local test page with bookmarks on Ubuntu Xvfb](docs/ci-browser.png)
 
 ## Included
 
