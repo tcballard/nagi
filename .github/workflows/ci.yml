@@ -1,0 +1,48 @@
+name: Build and exercise Nagi
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev pkg-config xvfb xauth dbus-x11 xdotool imagemagick desktop-file-utils
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo test --locked
+      - run: cargo build --locked
+      - name: Validate desktop launcher
+        run: desktop-file-validate packaging/io.github.tcballard.Nagi.desktop
+      - name: Exercise real browser with local fixtures
+        run: dbus-run-session -- xvfb-run -a -s '-screen 0 1280x900x24' python3 tests/gui_smoke.py
+      - name: Compile release
+        run: cargo build --locked --release
+      - name: Package runnable Linux build
+        run: |
+          mkdir -p dist/nagi-linux-x86_64
+          cp target/release/nagi README.md LICENSE CREDITS.md dist/nagi-linux-x86_64/
+          cp -r packaging assets dist/nagi-linux-x86_64/
+          tar -C dist -czf dist/nagi-linux-x86_64.tar.gz nagi-linux-x86_64
+          sha256sum dist/nagi-linux-x86_64.tar.gz > dist/SHA256SUMS
+      - name: Upload build and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nagi-linux-x86_64
+          path: |
+            dist/*.tar.gz
+            dist/SHA256SUMS
+            target/evidence/
+          if-no-files-found: warn

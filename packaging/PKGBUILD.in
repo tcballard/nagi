@@ -1,0 +1,29 @@
+# Local release source recipe. Generate with scripts/prepare-package.sh.
+pkgname=nagi
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='A quiet native browser for Omarchy'
+arch=('x86_64' 'aarch64')
+url='https://github.com/tcballard/nagi'
+license=('MIT')
+depends=('gtk4' 'webkitgtk-6.0')
+makedepends=('rust' 'pkgconf')
+optdepends=('gst-libav: additional media codecs' 'gst-plugins-good: media playback' 'gst-plugins-bad: additional media formats' 'xdg-desktop-portal: desktop file dialogs')
+source=("nagi-$pkgver.tar.gz")
+sha256sums=('@SHA256@')
+prepare() {
+  cd "$srcdir/nagi-$pkgver"
+  cargo fetch --locked
+}
+build() {
+  cd "$srcdir/nagi-$pkgver"
+  cargo build --frozen --release
+}
+check() {
+  cd "$srcdir/nagi-$pkgver"
+  cargo test --frozen
+}
+package() {
+  cd "$srcdir/nagi-$pkgver"
+  make install DESTDIR="$pkgdir" PREFIX=/usr
+}
