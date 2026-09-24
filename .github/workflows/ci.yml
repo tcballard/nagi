@@ -38,6 +38,7 @@ jobs:
       - run: cargo test --locked
       - run: cargo build --locked
       - run: python3 tests/config_transactions.py
+      - run: python3 tests/extensions_cli.py
       - name: Validate desktop launcher
         run: desktop-file-validate packaging/io.github.tcballard.Nagi.desktop
       - name: Exercise real browser with local fixtures

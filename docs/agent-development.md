@@ -112,3 +112,46 @@ session. Events retain the last 512 entries and no page contents. Cancellation
 stops pending work; it cannot undo already completed website actions. The
 visible Stop button revokes all access and closes the socket. Restart Nagi to
 enable another control session. Downloads continue to use native save prompts.
+
+## 4. Personal extensions
+
+`nagi extension schema` describes the API. Install the bundled example with
+`nagi extension install < examples/extensions/research.json`. Installation
+validates and stores code in `~/.config/nagi/extensions/`; it does not enable it.
+Open `nagi --extensions`, review the access description and enable the extension.
+`nagi extension list` reports IDs, hashes and current approval. `disable ID`
+revokes it. Changing installed content invalidates approval. Never edit grants
+as a substitute for owner approval.
+
+Manifests (API 1) register up to 16 named commands: open an HTTP(S) URL, show
+an offline sidebar, or apply a validated settings batch. The Extensions panel
+runs these commands; an enabled control session also provides
+`nagi browser extension.commands` and
+`nagi browser extension.run '{"extension":"research","command":"reading-layout"}'`.
+
+Sidebar/new-tab HTML uses an ephemeral WebKit view with restrictive CSP: no
+network, remote frames, form submission, native filesystem or shell bridge.
+JavaScript can manipulate the panel DOM. Storage is temporary; the example
+explicitly warns that notes must be copied before closing. Select a provider
+with `nagi config set new_tab.extension research`; keep `new_tab.url` empty.
+Private tabs never use extensions. A hung panel is terminated and disabled
+by a three-second responsiveness watchdog; the native browser stays available.
+
+Site hooks contain exact `origin`, optional `css`, and optional `script`.
+They run after navigation in an isolated JavaScript world, only on approved
+normal-tab origins. This isolates JavaScript globals, not DOM effects or
+network activity: site scripts/styles are powerful and may interact with
+signed-in pages. Review that access before approving. No privileged host API
+is exposed. A failing/unresponsive extension is disabled. Revocation stops
+affected renderer pages to end lingering timers; reload to resume without it.
+Already completed website effects cannot be undone by disabling an extension.
+
+Event hooks support `navigation.finished` and successful `download.finished`
+for exact origins, delivering bounded plain-text notices. Commands are invoked
+explicitly, preventing event-triggered navigation/configuration loops. Agent
+navigation/download events are also available through the control event cursor.
+
+Personal code lives outside the installed package. Package upgrades preserve
+it; incompatible API versions and changed hashes remain disabled. The manifest
+and example are the v1 contract; future capabilities require an explicit API
+revision and migration. No general-purpose native plugin loader is included.

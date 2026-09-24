@@ -80,6 +80,7 @@ impl Browser {
             // A cached same-site favicon may not emit another property change.
             if event == webkit::LoadEvent::Finished {
                 b.control_event("navigation.finished", t.id);
+                b.extension_navigation(&t);
                 if let Some(texture) = v.favicon() {
                     t.favicon.set_paintable(Some(&texture));
                 }
@@ -505,6 +506,10 @@ impl Browser {
                 download.cancel();
                 return;
             };
+            let source = download.web_view().and_then(|v| b.tabs.borrow().iter().find(|t| t.view.borrow().as_ref()==Some(&v) && !t.private).cloned());
+            let source_id = source.as_ref().map(|t| t.id);
+            let source_origin = source.as_ref().and_then(|t| origin(&t.page.borrow().url));
+            if let Some(id) = source_id { b.control_event("download.started", id); }
             let item = Rc::new(DownloadRow {
                 download: download.clone(),
                 title: RefCell::new("Download".into()),
@@ -572,6 +577,10 @@ impl Browser {
                     }
                 }
                 if let Some(b) = weak.upgrade() {
+                    if let Some(id) = source_id { b.control_event("download.finished", id); }
+                    if wi.upgrade().is_some_and(|i| !i.failed.get()) {
+                        if let Some(origin) = &source_origin { b.extension_event("download.finished", origin); }
+                    }
                     if *b.panel_kind.borrow() == "Downloads" && b.panel.is_visible() {
                         b.show_panel("Downloads");
                     }
