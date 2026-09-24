@@ -74,28 +74,67 @@ pub fn validate(s: &Settings) -> Result<(), String> {
     if !s.zoom.is_finite() || !(0.5..=2.0).contains(&s.zoom) {
         return Err("zoom must be 0.5 through 2.0".into());
     }
-    let mut seen = std::collections::HashSet::new();
-    for (name, accel) in &s.shortcuts {
+    for name in s.shortcuts.keys() {
         if !OVERRIDES.contains(&name.as_str()) {
             return Err(format!("Unknown shortcut: {name}"));
         }
-        let Some((key, mods)) = gtk::accelerator_parse(accel) else {
-            return Err(format!("Invalid GTK shortcut: {accel}"));
-        };
-        if !mods.intersects(gtk::gdk::ModifierType::CONTROL_MASK | gtk::gdk::ModifierType::ALT_MASK)
-            || key == gtk::gdk::Key::Tab
-            || key == gtk::gdk::Key::Escape
-        {
-            return Err(format!(
-                "Shortcut must use Ctrl or Alt and must leave Tab/Escape to the page: {accel}"
-            ));
-        }
-        let canonical = gtk::accelerator_name(key, mods).to_string();
+    }
+    let mut seen = std::collections::HashSet::new();
+    for (name, fallback) in [
+        ("search", "<Control><Alt>l"),
+        ("address", "<Control>l"),
+        ("new", "<Control>t"),
+        ("tabs", "<Control>k"),
+        ("history", "<Control>h"),
+        ("bookmarks", "<Control>b"),
+        ("downloads", "<Control>j"),
+        ("find", "<Control>f"),
+        ("reload", "<Control>r"),
+    ] {
+        let accel = s.shortcuts.get(name).map(String::as_str).unwrap_or(fallback);
+        let canonical = canonical_shortcut(accel)?;
         if !seen.insert(canonical) {
-            return Err("Two actions use the same shortcut".into());
+            return Err(format!("Shortcut for {name} conflicts with another browser action"));
+        }
+    }
+    for reserved in [
+        "<Control>Tab", "<Control><Shift>Tab", "<Control>w", "<Control><Shift>n",
+        "<Control>1", "<Control>2", "<Control>3", "<Control>4", "<Control>5",
+        "<Control>6", "<Control>7", "<Control>8", "<Control>9",
+    ] {
+        let canonical = reserved.to_ascii_lowercase();
+        if !seen.insert(canonical) {
+            return Err(format!("Shortcut {reserved} is reserved for another browser action"));
         }
     }
     Ok(())
+}
+
+fn canonical_shortcut(accel: &str) -> Result<String, String> {
+    let mut rest = accel;
+    let mut control = false;
+    let mut alt = false;
+    let mut shift = false;
+    while let Some(modifier) = rest.strip_prefix('<') {
+        let Some((name, tail)) = modifier.split_once('>') else { break; };
+        match name.to_ascii_lowercase().as_str() {
+            "control" | "ctrl" if !control => control = true,
+            "alt" if !alt => alt = true,
+            "shift" if !shift => shift = true,
+            _ => return Err(format!("Unsupported modifier: {name}")),
+        }
+        rest = tail;
+    }
+    let key = rest.to_ascii_lowercase();
+    let valid = (key.len() == 1 && key.bytes().all(|c| c.is_ascii_alphanumeric()))
+        || ["plus", "equal", "minus", "comma", "bracketleft", "bracketright"]
+            .contains(&key.as_str())
+        || key.strip_prefix('f').and_then(|n| n.parse::<u8>().ok()).is_some_and(|n| (1..=12).contains(&n));
+    if !valid || !(control || alt) || (rest.contains('<') || rest.contains('>')) {
+        return Err(format!("Use a Ctrl or Alt shortcut with a supported key: {accel}"));
+    }
+    Ok(format!("{}{}{}{}", if control { "<control>" } else { "" },
+        if shift { "<shift>" } else { "" }, if alt { "<alt>" } else { "" }, key))
 }
 
 pub fn set(s: &mut Settings, key: &str, value: &str) -> Result<(), String> {
@@ -206,6 +245,7 @@ mod tests {
         set(&mut s, "shortcuts.search", "<Control><Alt>p").unwrap();
         assert!(set(&mut s, "shortcuts.search", "Tab").is_err());
         assert!(set(&mut s, "zoom", "NaN").is_err());
+        assert!(set(&mut s, "shortcuts.search", "<Control>t").is_err());
         assert!(set(&mut s, "features.link_previews", "yes").is_err());
         assert_eq!(s.shortcuts["search"], "<Control><Alt>p");
         assert_eq!(s.tab_layout, "Left");

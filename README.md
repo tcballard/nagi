@@ -126,7 +126,7 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 
 Omarchy's Super+W closes the window. Ctrl+W closes the current tab.
 
-### Floating address bar (development branch)
+### Floating address bar
 
 The address bar opens in the centre of the browser over the current page. Press
 **Ctrl+Alt+L**, or click the search icon beside the tabs, for an empty composer.
@@ -145,15 +145,6 @@ Its 120ms fade follows GTK’s animation setting. Window size and maximized stat
 are restored on launch; your compositor’s tiling rules still apply.
 
 [Quiet new tab](docs/polish-new-tab.png) · [Narrow composer](docs/polish-narrow.png)
-These changes are not in the v0.0.2 download above. From an existing checkout:
-
-```sh
-git fetch origin feat/floating-address-bar
-git switch feat/floating-address-bar
-cargo build --release --locked
-./target/release/nagi --focus-address
-```
-
 Ctrl+Alt+L is handled inside Nagi while its window is focused. A custom
 compositor binding can intercept it; Ctrl+L remains available to edit the address.
 
@@ -170,9 +161,51 @@ it is closed. Nagi does not install or overwrite any compositor binding. Older
 Hyprland configurations using `.conf` instead of Lua require their own binding
 syntax. This integration still needs a live Omarchy/Hyprland check.
 
+## Layout and agent configuration (development branch)
+
+**Settings → Tabs** switches between the default horizontal strip and a left
+sidebar. Drag tabs to reorder them; the arrangement is saved with the session.
+Web forms keep `Tab` and `Shift+Tab`; `Ctrl+Tab` moves between browser tabs and
+`Ctrl+1`–`Ctrl+9` jumps to one (9 selects the last). The optional link detail
+on hover is off by default and shows the link's title/address without fetching
+the target. Bookmark import accepts Nagi JSON and Chromium-style bookmark JSON
+(such as a compatible Comet profile `Bookmarks` export). It imports only valid
+HTTP(S) bookmarks, never cookies or credentials.
+
+Settings can also be read or changed while Nagi is open. Changes appear within
+about a second; there is no separate agent server and no browser page access.
+The CLI validates keys and values before replacing the settings file.
+
+```sh
+nagi config get
+nagi config get tabs.layout
+nagi config set tabs.layout Left       # Top or Left
+nagi config set features.link_previews true
+nagi config set shortcuts.search '<Control><Alt>p'
+nagi config set shortcuts.search default
+```
+
+Other keys: `search.engine` (DuckDuckGo/Google/Brave), `appearance`
+(Theme/Dark/Light), `restore_tabs` (true/false), `block_trackers`
+(true/false), and `zoom` (0.5–2.0). Configurable shortcut actions are search,
+address, new, tabs, history, bookmarks, downloads, find and reload; enter a
+valid GTK accelerator such as `<Control><Alt>p`. The Settings panel edits the
+same values. Agents can inspect all values with `nagi config get` before making
+a change. Browser actions remain within Nagi; global Hyprland bindings are
+configured separately.
+
+For the branch under review:
+
+```sh
+git fetch origin feat/agent-config-vertical-tabs
+git switch feat/agent-config-vertical-tabs
+./scripts/install-local.sh
+```
+
 ## Data and privacy
 
-- `~/.local/state/nagi/state.json`: settings, tabs, bookmarks, history and hidden selectors.
+- `~/.local/state/nagi/state.json`: tabs, bookmarks, history and hidden selectors.
+- `~/.local/state/nagi/settings.json`: settings shared by the panel and agent CLI.
 - `~/.local/share/nagi/web/`: cookies and website storage managed by WebKit.
 - `~/.cache/nagi/`: engine and content-filter caches.
 
