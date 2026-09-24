@@ -89,7 +89,9 @@ try:
     wait_for(lambda:any(v['url']==url+'second' for v in state()['history']))
     key('ctrl+w');key('ctrl+shift+t');wait_for(lambda:any(v['url']==url+'second' for v in state()['tabs']))
     # Suggestions switch to an existing tab without navigating or duplicating it.
-    key('ctrl+t');before=len(state()['tabs']);key('ctrl+alt+l')
+    previous=len(state()['tabs']);key('ctrl+t')
+    wait_for(lambda:len(state()['tabs'])==previous+1)
+    before=len(state()['tabs']);key('ctrl+alt+l')
     xd('type','--clearmodifiers','Second page');time.sleep(.4)
     subprocess.run(['import','-window',window,str(OUT/'nagi-suggestions.png')],check=True,env=env)
     key('Down');key('Return');assert_page_focus()
@@ -113,13 +115,18 @@ try:
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
     saved=state();assert len(saved['bookmarks'])==1
     assert saved['window']['width']==1040 and saved['window']['height']==720
+    # GTK's reduced-motion setting must preserve composer focus and dismissal.
+    gtk_config=pathlib.Path(env['XDG_CONFIG_HOME'])/'gtk-4.0';gtk_config.mkdir(parents=True,exist_ok=True)
+    (gtk_config/'settings.ini').write_text('[Settings]\ngtk-enable-animations=false\n')
     p=subprocess.Popen([str(BINARY)],env=env,stdout=log,stderr=log)
     window=wait_for(lambda:xd('search','--onlyvisible','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
     time.sleep(1);assert state()['tabs']==saved['tabs']
     geometry=xd('getwindowgeometry','--shell',window)
     assert 'WIDTH=1040' in geometry and 'HEIGHT=720' in geometry
+    key('Escape');navigate(url+'reduced-motion');wait_for(lambda:'/reduced-motion' in requests)
+    key('ctrl+alt+l');key('Escape');assert_page_focus()
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
-    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local tab and history suggestions via keyboard','favicon requested from local fixture','window dimensions restored after restart','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
+    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local tab and history suggestions via keyboard','favicon requested from local fixture','window dimensions restored after restart','composer with GTK animations disabled','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
     (OUT/'gui-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 finally:
     subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)

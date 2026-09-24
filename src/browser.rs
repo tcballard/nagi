@@ -108,7 +108,9 @@ impl Browser {
             .default_width(width)
             .default_height(height)
             .build();
-        if state.window.maximized { window.maximize(); }
+        if state.window.maximized {
+            window.maximize();
+        }
         window.add_css_class("browser");
         window.set_icon_name(Some("nagi"));
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -307,18 +309,40 @@ impl Browser {
         });
         let weak = Rc::downgrade(&b);
         b.suggestions.connect_row_activated(move |_, row| {
-            if let Some(b) = weak.upgrade() { b.activate_suggestion(row.index() as usize); }
+            if let Some(b) = weak.upgrade() {
+                b.activate_suggestion(row.index() as usize);
+            }
         });
         let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
         let weak = Rc::downgrade(&b);
         keys.connect_key_pressed(move |_, key, _, _| {
             if let Some(b) = weak.upgrade() {
                 if key == gtk::gdk::Key::Down || key == gtk::gdk::Key::Up {
                     let count = b.matches.borrow().len() as i32;
                     if count > 0 {
-                        let current = b.suggestions.selected_row().map(|r| r.index()).unwrap_or(-1);
-                        let next = if key == gtk::gdk::Key::Down { (current + 1).min(count - 1) } else { current - 1 };
-                        b.suggestions.select_row(b.suggestions.row_at_index(next).as_ref());
+                        let current = b
+                            .suggestions
+                            .selected_row()
+                            .map(|r| r.index())
+                            .unwrap_or(-1);
+                        let next = if key == gtk::gdk::Key::Down {
+                            (current + 1).min(count - 1)
+                        } else {
+                            current - 1
+                        };
+                        let row = b.suggestions.row_at_index(next);
+                        b.suggestions.select_row(row.as_ref());
+                        if let Some(bounds) = row.and_then(|r| r.compute_bounds(&b.suggestions)) {
+                            let adjustment = b.suggestion_scroll.vadjustment();
+                            let top = f64::from(bounds.y());
+                            let bottom = top + f64::from(bounds.height());
+                            if top < adjustment.value() {
+                                adjustment.set_value(top);
+                            } else if bottom > adjustment.value() + adjustment.page_size() {
+                                adjustment.set_value(bottom - adjustment.page_size());
+                            }
+                        }
                         return glib::Propagation::Stop;
                     }
                 }
@@ -329,7 +353,9 @@ impl Browser {
         for property in ["default-width", "default-height", "maximized"] {
             let weak = Rc::downgrade(&b);
             b.window.connect_notify_local(Some(property), move |_, _| {
-                if let Some(b) = weak.upgrade() { b.dirty.set(true); }
+                if let Some(b) = weak.upgrade() {
+                    b.dirty.set(true);
+                }
             });
         }
         b.actions(app);
@@ -358,7 +384,9 @@ impl Browser {
         let weak = Rc::downgrade(&b);
         b.address.connect_changed(move |entry| {
             submit.set_sensitive(!entry.text().trim().is_empty());
-            if let Some(b) = weak.upgrade() { b.refresh_suggestions(); }
+            if let Some(b) = weak.upgrade() {
+                b.refresh_suggestions();
+            }
         });
         let weak = Rc::downgrade(&b);
         plus.connect_clicked(move |_| {
@@ -497,7 +525,11 @@ impl Browser {
         let tabs = self.tabs.borrow();
         let mut state = self.state.borrow_mut();
         let (width, height) = self.window.default_size();
-        state.window = WindowState { width, height, maximized: self.window.is_maximized() };
+        state.window = WindowState {
+            width,
+            height,
+            maximized: self.window.is_maximized(),
+        };
         state.tabs = tabs
             .iter()
             .filter(|t| !t.private)
@@ -716,7 +748,8 @@ impl Browser {
             let p = t.page.borrow();
             t.internal_icon
                 .set_visible(p.url == "about:blank" || t.reader.get());
-            t.favicon.set_visible(p.url != "about:blank" && !t.reader.get());
+            t.favicon
+                .set_visible(p.url != "about:blank" && !t.reader.get());
             t.label.set_text(&format!(
                 "{}{}{}",
                 if t.private { "◌ " } else { "" },
@@ -737,12 +770,17 @@ impl Browser {
         let start = gtk::Button::with_label("Search or paste a link");
         let weak = Rc::downgrade(self);
         start.connect_clicked(move |_| {
-            if let Some(b) = weak.upgrade() { b.show_search(); }
+            if let Some(b) = weak.upgrade() {
+                b.show_search();
+            }
         });
         area.append(&start);
         area.append(&label("Ctrl+Alt+L", "muted"));
         if tab.private {
-            let privacy = label("Private tab · History and session are not saved.\nDownloads remain on disk.", "muted");
+            let privacy = label(
+                "Private tab · History and session are not saved.\nDownloads remain on disk.",
+                "muted",
+            );
             privacy.set_wrap(true);
             privacy.set_justify(gtk::Justification::Center);
             area.append(&privacy);
@@ -758,14 +796,27 @@ impl Browser {
         }
     }
     fn refresh_suggestions(&self) {
-        if !self.composer_open.get() { return; }
-        while let Some(row) = self.suggestions.first_child() { self.suggestions.remove(&row); }
-        let tabs: Vec<_> = self.tabs.borrow().iter().map(|t| (t.id, t.page.borrow().clone(), t.private)).collect();
+        if !self.composer_open.get() {
+            return;
+        }
+        while let Some(row) = self.suggestions.first_child() {
+            self.suggestions.remove(&row);
+        }
+        let tabs: Vec<_> = self
+            .tabs
+            .borrow()
+            .iter()
+            .map(|t| (t.id, t.page.borrow().clone(), t.private))
+            .collect();
         let private = self.tab().is_some_and(|t| t.private);
-        let matches = crate::suggestions::find(&self.address.text(), &self.state.borrow(), &tabs, private);
+        let matches =
+            crate::suggestions::find(&self.address.text(), &self.state.borrow(), &tabs, private);
         for item in &matches {
             let row = gtk::Box::new(gtk::Orientation::Vertical, 3);
-            for (text, class) in [(&item.title[..], ""), (&format!("{} · {}", item.caption(), item.url), "muted")] {
+            for (text, class) in [
+                (&item.title[..], ""),
+                (&format!("{} · {}", item.caption(), item.url), "muted"),
+            ] {
                 let line = label(text, class);
                 line.set_xalign(0.0);
                 line.set_ellipsize(gtk::pango::EllipsizeMode::End);
@@ -791,7 +842,9 @@ impl Browser {
     fn submit_address(self: &Rc<Self>) {
         if let Some(row) = self.suggestions.selected_row() {
             self.activate_suggestion(row.index() as usize);
-        } else { self.navigate(&self.address.text()); }
+        } else {
+            self.navigate(&self.address.text());
+        }
     }
     pub fn show_search(&self) {
         if !self.composer_open.get() {

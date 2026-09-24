@@ -48,7 +48,10 @@ impl Browser {
             builder = builder.network_session(&session);
         }
         let view = builder.build();
-        if let Some(manager) = view.network_session().and_then(|s| s.website_data_manager()) {
+        if let Some(manager) = view
+            .network_session()
+            .and_then(|s| s.website_data_manager())
+        {
             manager.set_favicons_enabled(true);
         }
         let wt = Rc::downgrade(tab);
@@ -56,7 +59,9 @@ impl Browser {
             if let Some(t) = wt.upgrade() {
                 if let Some(texture) = v.favicon() {
                     t.favicon.set_paintable(Some(&texture));
-                } else { t.favicon.set_icon_name(Some("text-html-symbolic")); }
+                } else {
+                    t.favicon.set_icon_name(Some("text-html-symbolic"));
+                }
             }
         });
         *tab.view.borrow_mut() = Some(view.clone());

@@ -33,7 +33,9 @@ shows the development search composer over a local test page on Ubuntu/Xvfb.
 
 ## Included
 
-- Chat-style search composer with a single submit control; browser actions in the menu.
+- Chat-style search composer with local tab, bookmark and history suggestions.
+- Site favicons, a quiet new-tab page and remembered window size.
+- A short composer fade that follows GTK’s animation setting; browser actions in the menu.
 - Tabs, pinned tabs, duplicate, mute, reopen closed tabs and a searchable tab list.
 - Session restoration; background restored tabs load when selected.
 - Private tabs with separate ephemeral website storage.
@@ -132,6 +134,12 @@ The address bar opens in the centre of the browser over the current page. Press
 press Enter or use the send arrow. Escape or a click outside returns focus to
 the page. New tabs open the composer automatically. Back/forward, reload/stop,
 site information, protection and bookmarks are in the menu beside the tabs.
+Suggestions appear only after typing. Use ↑/↓ then Enter, or click a result;
+Enter without selecting a result searches your input. Open tabs come first,
+then bookmarks and recent history, with duplicate URLs removed. Suggestions
+stay on your machine: typing sends no request to a search service. Private
+tabs suggest only other private tabs and explicit bookmarks, never normal history.
+
 The composer searches the web; it does not send prompts to an AI service.
 These changes are not in the v0.0.2 download above. From an existing checkout:
 
