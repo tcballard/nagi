@@ -78,6 +78,8 @@ it can mistake an intentionally uniform page for blank. Inspect flagged
 screenshots manually. Do not treat blocked-auth entries as working sites.
 
 The first full baseline still must be run on real Omarchy, with a second run
-showing at least 95% matching statuses. Inspect and redact screenshots before
-committing them. Native CI fixtures are useful for harness correctness, but
-cannot count as that baseline.
+showing at least 95% matching statuses. Reports and screenshots are ignored by
+Git by default. Inspect and redact them, then explicitly add only reviewed
+baseline files with `git add -f`; never force-add the test profile or raw
+authenticated screenshots. Native CI fixtures are useful for harness
+correctness, but cannot count as that baseline.

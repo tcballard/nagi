@@ -166,7 +166,7 @@ fn run(args: &[String]) -> Result<i32, String> {
                             if png.len() > 20 * 1024 * 1024 { return None; }
                             fs::write(&screenshot, &png).ok().map(|_| screenshot.to_string_lossy().into_owned())
                         });
-                        let script = "JSON.stringify({media_end:(document.querySelector('video, audio')||{}).currentTime||null,error_count:(window.__nagiCompatErrors||[]).length,drm_probe:window.__nagiDrmProbe||null})";
+                        let script = "JSON.stringify({media_end:(document.querySelector('video, audio')||{}).currentTime||null,error_count:(window.__nagiCompatErrors||[]).length,error_messages:(window.__nagiCompatErrors||[]).slice(0,100).map(x=>String(x).slice(0,300)),drm_probe:window.__nagiDrmProbe||null})";
                         let app_result = app_end.clone();
                         let output_result = output_end.clone();
                         let done_result = done_end.clone();
@@ -184,7 +184,8 @@ fn run(args: &[String]) -> Result<i32, String> {
                             let rendered = saved.is_some();
                             finish(&app_result,&output_result,&done_result,json!({
                                 "id":id_end,"status":status,"elapsed_ms":started.elapsed().as_millis(),
-                                "console_error_count":errors,"screenshot":saved,"drm_probe":later["drm_probe"],
+                                "console_error_count":errors,"console_errors":later["error_messages"],
+                                "screenshot":saved,"drm_probe":later["drm_probe"],
                                 "checks":{"loads":{"ok":true},"renders":{"ok":rendered},
                                     "auth_persisted":{"ok":dom_end["auth_persisted"]==true},
                                     "interaction":{"ok":dom_end["interaction"]==true},
