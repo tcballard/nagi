@@ -282,9 +282,23 @@ impl Browser {
         }
         let result = (|| -> Result<Option<Value>, String> {
             match method {
-                "extension.commands" => Ok(Some(json!(crate::extensions::list().into_iter().filter_map(Result::ok).filter(|e| e.enabled).map(|e| json!({"extension":e.manifest.id,"commands":e.manifest.commands})).collect::<Vec<_>>()))),
+                "extension.commands" => Ok(Some(json!(crate::extensions::list()
+                    .into_iter()
+                    .filter_map(Result::ok)
+                    .filter(|e| e.enabled)
+                    .map(|e| json!({"extension":e.manifest.id,"commands":e.manifest.commands}))
+                    .collect::<Vec<_>>()))),
                 "extension.run" => {
-                    self.extension_command(params.get("extension").and_then(Value::as_str).ok_or("Supply extension ID")?, params.get("command").and_then(Value::as_str).ok_or("Supply command ID")?)?;
+                    self.extension_command(
+                        params
+                            .get("extension")
+                            .and_then(Value::as_str)
+                            .ok_or("Supply extension ID")?,
+                        params
+                            .get("command")
+                            .and_then(Value::as_str)
+                            .ok_or("Supply command ID")?,
+                    )?;
                     Ok(Some(json!({"performed":true})))
                 }
                 "capabilities" => Ok(Some(

@@ -374,6 +374,16 @@ impl Browser {
             m.add_filter(filter);
         }
         m.remove_all_scripts();
+        // Retain the named world across evaluate_javascript calls. Without a
+        // registered user script WebKit can discard an otherwise unowned world.
+        m.add_script(&webkit::UserScript::for_world(
+            "window.__nagiControl = null;",
+            webkit::UserContentInjectedFrames::TopFrame,
+            webkit::UserScriptInjectionTime::Start,
+            "nagi-control",
+            &[],
+            &[],
+        ));
         let hidden = serde_json::to_string(&self.state.borrow().hidden).unwrap_or_default();
         let js = format!(
             r#"(()=>{{const rules={hidden};const selectors=rules[location.origin]||[];if(!selectors.length)return;const apply=()=>{{if(!document.documentElement)return false;const style=document.createElement('style');style.textContent=selectors.map(s=>s+'{{display:none!important}}').join('\n');document.documentElement.append(style);return true;}};if(!apply()){{const observer=new MutationObserver(()=>{{if(apply())observer.disconnect();}});observer.observe(document,{{childList:true,subtree:true}});}}}})();"#
@@ -506,10 +516,18 @@ impl Browser {
                 download.cancel();
                 return;
             };
-            let source = download.web_view().and_then(|v| b.tabs.borrow().iter().find(|t| t.view.borrow().as_ref()==Some(&v) && !t.private).cloned());
+            let source = download.web_view().and_then(|v| {
+                b.tabs
+                    .borrow()
+                    .iter()
+                    .find(|t| t.view.borrow().as_ref() == Some(&v) && !t.private)
+                    .cloned()
+            });
             let source_id = source.as_ref().map(|t| t.id);
             let source_origin = source.as_ref().and_then(|t| origin(&t.page.borrow().url));
-            if let Some(id) = source_id { b.control_event("download.started", id); }
+            if let Some(id) = source_id {
+                b.control_event("download.started", id);
+            }
             let item = Rc::new(DownloadRow {
                 download: download.clone(),
                 title: RefCell::new("Download".into()),
@@ -577,9 +595,13 @@ impl Browser {
                     }
                 }
                 if let Some(b) = weak.upgrade() {
-                    if let Some(id) = source_id { b.control_event("download.finished", id); }
+                    if let Some(id) = source_id {
+                        b.control_event("download.finished", id);
+                    }
                     if wi.upgrade().is_some_and(|i| !i.failed.get()) {
-                        if let Some(origin) = &source_origin { b.extension_event("download.finished", origin); }
+                        if let Some(origin) = &source_origin {
+                            b.extension_event("download.finished", origin);
+                        }
                     }
                     if *b.panel_kind.borrow() == "Downloads" && b.panel.is_visible() {
                         b.show_panel("Downloads");

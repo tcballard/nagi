@@ -20,7 +20,7 @@ jobs:
       - name: Install native dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev pkg-config xvfb xauth dbus-x11 xdotool imagemagick desktop-file-utils python3-pil python3-gi
+          sudo apt-get install -y libgtk-4-dev libwebkitgtk-6.0-dev pkg-config xvfb xauth dbus-x11 xdotool imagemagick desktop-file-utils python3-pil python3-gi python3-pyatspi
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -51,6 +51,7 @@ jobs:
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/control_smoke.py
+          GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/extensions_smoke.py
       - name: Compile release
         run: cargo build --locked --release
       - name: Package runnable Linux build

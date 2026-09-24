@@ -4,9 +4,9 @@ mod config_store;
 mod control;
 mod control_transport;
 mod core;
-mod icons;
-mod extensions;
 mod extension_host;
+mod extensions;
+mod icons;
 mod import;
 mod panels;
 mod personal;
@@ -50,7 +50,14 @@ fn main() -> gtk::glib::ExitCode {
         "Present Nagi and summon the floating address bar",
         None,
     );
-    app.add_main_option("extensions", 0u8.into(), gtk::glib::OptionFlags::NONE, gtk::glib::OptionArg::None, "Open installed extensions", None);
+    app.add_main_option(
+        "extensions",
+        0u8.into(),
+        gtk::glib::OptionFlags::NONE,
+        gtk::glib::OptionArg::None,
+        "Open installed extensions",
+        None,
+    );
     app.add_main_option(
         "agent-control",
         0u8.into(),
@@ -133,7 +140,15 @@ fn main() -> gtk::glib::ExitCode {
             }
         }
         browser.window.present();
-        if cmd.options_dict().lookup::<bool>("extensions").ok().flatten().unwrap_or(false) { browser.show_extensions(); }
+        if cmd
+            .options_dict()
+            .lookup::<bool>("extensions")
+            .ok()
+            .flatten()
+            .unwrap_or(false)
+        {
+            browser.show_extensions();
+        }
         if focus_address {
             browser.show_search();
         }

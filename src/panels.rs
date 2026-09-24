@@ -240,19 +240,49 @@ impl Browser {
                 content.append(&label("Personalisation", "heading"));
                 let settings = self.state.borrow().settings.clone();
                 for (key, title, value) in [
-                    ("layout.density", "Density: Comfortable or Compact", settings.density),
-                    ("tabs.sidebar_width", "Sidebar width: 140–420", settings.sidebar_width.to_string()),
-                    ("appearance.accent", "Accent: #RRGGBB, or empty for theme", settings.accent),
-                    ("new_tab.url", "New-tab URL: HTTP(S), or empty for Nagi", settings.new_tab_url),
-                    ("new_tab.extension", "New-tab extension ID, or empty for Nagi", settings.new_tab_extension),
-                    ("toolbar.actions", "Toolbar actions: JSON list", serde_json::to_string(&settings.toolbar_actions).unwrap()),
+                    (
+                        "layout.density",
+                        "Density: Comfortable or Compact",
+                        settings.density,
+                    ),
+                    (
+                        "tabs.sidebar_width",
+                        "Sidebar width: 140–420",
+                        settings.sidebar_width.to_string(),
+                    ),
+                    (
+                        "appearance.accent",
+                        "Accent: #RRGGBB, or empty for theme",
+                        settings.accent,
+                    ),
+                    (
+                        "new_tab.url",
+                        "New-tab URL: HTTP(S), or empty for Nagi",
+                        settings.new_tab_url,
+                    ),
+                    (
+                        "new_tab.extension",
+                        "New-tab extension ID, or empty for Nagi",
+                        settings.new_tab_extension,
+                    ),
+                    (
+                        "toolbar.actions",
+                        "Toolbar actions: JSON list",
+                        serde_json::to_string(&settings.toolbar_actions).unwrap(),
+                    ),
                 ] {
                     content.append(&label(title, ""));
                     let entry = gtk::Entry::new();
                     entry.set_text(&value);
                     entry.set_tooltip_text(Some("Press Enter to apply"));
                     let weak = Rc::downgrade(self);
-                    entry.connect_activate(move |e| { if let Some(b) = weak.upgrade() { if let Err(error) = b.set_preference(key, e.text().as_str()) { b.notice(&error); } } });
+                    entry.connect_activate(move |e| {
+                        if let Some(b) = weak.upgrade() {
+                            if let Err(error) = b.set_preference(key, e.text().as_str()) {
+                                b.notice(&error);
+                            }
+                        }
+                    });
                     content.append(&entry);
                 }
                 content.append(&label("Tabs", "heading"));
@@ -670,4 +700,3 @@ impl Browser {
         }
     }
 }
-
