@@ -96,6 +96,13 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:not cli('extension','list')[0]['enabled'],seconds=10)
         assert app.poll() is None
         assert cli('browser','capabilities')['result']['api']==1
+        # Safe startup bypasses settings/extensions/control without rewriting them.
+        preserved=(pathlib.Path(env['XDG_CONFIG_HOME'])/'nagi/extensions/grants.json').read_bytes()
+        app.terminate(); app.wait(timeout=5)
+        app=subprocess.Popen([binary,'--safe-mode','--agent-control',origin+'/safe'],env=env,stdout=log,stderr=log)
+        wait(lambda:'/safe' in requests)
+        cli('browser','capabilities',ok=False)
+        assert (pathlib.Path(env['XDG_CONFIG_HOME'])/'nagi/extensions/grants.json').read_bytes()==preserved
     finally:
         app.terminate()
         try:app.wait(timeout=5)
