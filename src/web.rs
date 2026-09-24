@@ -45,9 +45,22 @@ impl Browser {
             } else {
                 self.session.clone()
             };
+            if let Some(manager) = session.website_data_manager() {
+                manager.set_favicons_enabled(true);
+            }
             builder = builder.network_session(&session);
         }
         let view = builder.build();
+        let wt = Rc::downgrade(tab);
+        view.connect_favicon_notify(move |v| {
+            if let Some(t) = wt.upgrade() {
+                if let Some(texture) = v.favicon() {
+                    t.favicon.set_paintable(Some(&texture));
+                } else {
+                    t.favicon.set_icon_name(Some("text-html-symbolic"));
+                }
+            }
+        });
         *tab.view.borrow_mut() = Some(view.clone());
         tab.holder.append(&view);
         self.refresh_content(tab);
@@ -58,8 +71,15 @@ impl Browser {
                 return;
             };
             if event == webkit::LoadEvent::Started {
+                t.favicon.set_icon_name(Some("text-html-symbolic"));
                 t.failed.set(false);
                 t.picking.set(false);
+            }
+            // A cached same-site favicon may not emit another property change.
+            if event == webkit::LoadEvent::Finished {
+                if let Some(texture) = v.favicon() {
+                    t.favicon.set_paintable(Some(&texture));
+                }
             }
             if !t.reader.get() {
                 if let Some(uri) = v.uri() {
@@ -154,6 +174,7 @@ impl Browser {
         view.connect_enter_fullscreen(move |_| {
             if let Some(b) = weak.upgrade() {
                 b.window.fullscreen();
+                b.dismiss_address();
                 b.chrome.set_visible(false);
             }
             false

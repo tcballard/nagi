@@ -24,16 +24,18 @@ nagi
 ```
 
 **Preview pending:** an actual Omarchy/Hyprland screenshot will go in `preview.png`
-after on-device testing. This [automated browser capture](docs/ci-browser.png)
-shows a local test page on Ubuntu/Xvfb, with the bookmarks panel open.
+after on-device testing. This [automated browser capture](docs/polish-suggestions.png)
+shows local tab suggestions in the development composer on Ubuntu/Xvfb.
 [Verification](VERIFICATION.md) · [Build and configuration](#build-and-run-on-omarchy--arch) ·
 [Keyboard shortcuts](#keyboard) · [Known limits](#status).
 
-![Nagi rendering a local test page with bookmarks on Ubuntu Xvfb](docs/ci-browser.png)
+![Nagi composer with local tab suggestions on Ubuntu Xvfb](docs/polish-suggestions.png)
 
 ## Included
 
-- Address and search field, back/forward, reload/stop and zoom.
+- Chat-style search composer with local tab, bookmark and history suggestions.
+- Site favicons, a quiet new-tab page and remembered window size.
+- A short composer fade that follows GTK’s animation setting; browser actions in the menu.
 - Tabs, pinned tabs, duplicate, mute, reopen closed tabs and a searchable tab list.
 - Session restoration; background restored tabs load when selected.
 - Private tabs with separate ephemeral website storage.
@@ -104,7 +106,8 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 
 | Action | Shortcut |
 |---|---|
-| Address / search | Ctrl+L |
+| New search / edit current address | Ctrl+Alt+L / Ctrl+L |
+| Dismiss floating bar | Escape or click outside |
 | New / close tab | Ctrl+T / Ctrl+W |
 | Reopen closed tab | Ctrl+Shift+T |
 | Private tab | Ctrl+Shift+N |
@@ -122,6 +125,50 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 | Fullscreen | F11 |
 
 Omarchy's Super+W closes the window. Ctrl+W closes the current tab.
+
+### Floating address bar (development branch)
+
+The address bar opens in the centre of the browser over the current page. Press
+**Ctrl+Alt+L**, or click the search icon beside the tabs, for an empty composer.
+**Ctrl+L** selects the current URL for editing. Type an address or search and
+press Enter or use the send arrow. Escape or a click outside returns focus to
+the page. New tabs open the composer automatically. Back/forward, reload/stop,
+site information, protection and bookmarks are in the menu beside the tabs.
+Suggestions appear only after typing. Use ↑/↓ then Enter, or click a result;
+Enter without selecting a result searches your input. Open tabs come first,
+then bookmarks and recent history, with duplicate URLs removed. Suggestions
+stay on your machine: typing sends no request to a search service. Private
+tabs suggest only other private tabs and explicit bookmarks, never normal history.
+
+The composer searches the web; it does not send prompts to an AI service.
+Its 120ms fade follows GTK’s animation setting. Window size and maximized state
+are restored on launch; your compositor’s tiling rules still apply.
+
+[Quiet new tab](docs/polish-new-tab.png) · [Narrow composer](docs/polish-narrow.png)
+These changes are not in the v0.0.2 download above. From an existing checkout:
+
+```sh
+git fetch origin feat/floating-address-bar
+git switch feat/floating-address-bar
+cargo build --release --locked
+./target/release/nagi --focus-address
+```
+
+Ctrl+Alt+L is handled inside Nagi while its window is focused. A custom
+compositor binding can intercept it; Ctrl+L remains available to edit the address.
+
+For an optional desktop-wide shortcut that also presents Nagi, the current
+Omarchy Lua configuration accepts this in `~/.config/hypr/bindings.lua`:
+
+```lua
+o.bind("CTRL + ALT + L", "Nagi address / search", "nagi --focus-address")
+```
+
+Use an absolute executable path if `nagi` is not on your session PATH. This
+command reuses Nagi's existing window, without adding a tab, or starts Nagi if
+it is closed. Nagi does not install or overwrite any compositor binding. Older
+Hyprland configurations using `.conf` instead of Lua require their own binding
+syntax. This integration still needs a live Omarchy/Hyprland check.
 
 ## Data and privacy
 

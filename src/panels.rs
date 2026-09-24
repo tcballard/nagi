@@ -26,6 +26,7 @@ impl Browser {
         }
     }
     pub fn show_panel(self: &Rc<Self>, kind: &str) {
+        self.dismiss_address();
         *self.panel_kind.borrow_mut() = kind.into();
         clear(&self.panel);
         self.panel.set_visible(true);

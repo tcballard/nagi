@@ -44,8 +44,30 @@ pub struct Visit {
 }
 #[derive(Clone, Serialize, Deserialize, Debug)]
 #[serde(default)]
+pub struct WindowState {
+    pub width: i32,
+    pub height: i32,
+    pub maximized: bool,
+}
+impl Default for WindowState {
+    fn default() -> Self {
+        Self {
+            width: 1180,
+            height: 800,
+            maximized: false,
+        }
+    }
+}
+impl WindowState {
+    pub fn size(&self) -> (i32, i32) {
+        (self.width.clamp(320, 7680), self.height.clamp(240, 4320))
+    }
+}
+#[derive(Clone, Serialize, Deserialize, Debug)]
+#[serde(default)]
 pub struct State {
     pub schema: u32,
+    pub window: WindowState,
     pub tabs: Vec<Page>,
     pub active: usize,
     pub bookmarks: Vec<Page>,
@@ -58,6 +80,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             schema: 1,
+            window: WindowState::default(),
             tabs: vec![],
             active: 0,
             bookmarks: vec![],

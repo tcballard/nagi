@@ -15,6 +15,7 @@ pub struct Tab {
     pub button: gtk::Box,
     pub label: gtk::Label,
     pub internal_icon: gtk::Image,
+    pub favicon: gtk::Image,
     pub reader: Cell<bool>,
     pub failed: Cell<bool>,
     pub picking: Cell<bool>,
@@ -37,13 +38,16 @@ pub struct Browser {
     pub stack: gtk::Stack,
     pub strip: gtk::Box,
     pub chrome: gtk::Box,
+    root: gtk::Box,
+    address_layer: gtk::Overlay,
+    composer_revealer: gtk::Revealer,
+    composer_open: Cell<bool>,
+    suggestions: gtk::ListBox,
+    suggestion_scroll: gtk::ScrolledWindow,
+    matches: RefCell<Vec<crate::suggestions::Suggestion>>,
+    address_button: gtk::Button,
     pub address: gtk::Entry,
-    address_focus: gtk::EventControllerFocus,
-    pub back: gtk::Button,
-    pub forward: gtk::Button,
-    pub reload: gtk::Button,
-    pub shield: gtk::Button,
-    pub star: gtk::Button,
+    address_error: gtk::Label,
     pub progress: gtk::ProgressBar,
     pub status: gtk::Label,
     pub panel: gtk::Box,
@@ -97,21 +101,28 @@ impl Browser {
         } else {
             None
         };
+        let (width, height) = state.window.size();
         let window = gtk::ApplicationWindow::builder()
             .application(app)
             .title(APP_NAME)
-            .default_width(1180)
-            .default_height(800)
+            .default_width(width)
+            .default_height(height)
             .build();
+        if state.window.maximized {
+            window.maximize();
+        }
         window.add_css_class("browser");
         window.set_icon_name(Some("nagi"));
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        window.set_child(Some(&root));
+        let overlay = gtk::Overlay::new();
+        overlay.set_child(Some(&root));
+        window.set_child(Some(&overlay));
         let strip_line = gtk::Box::new(gtk::Orientation::Horizontal, 4);
         strip_line.add_css_class("tab-strip");
         strip_line.set_margin_start(8);
         strip_line.set_margin_end(8);
-        let brand = label("NAGI", "eyebrow");
+        let brand = crate::icons::image(24);
+        brand.set_valign(gtk::Align::Center);
         brand.set_tooltip_text(Some("Nagi — a quiet browser"));
         brand.set_margin_end(8);
         strip_line.append(&brand);
@@ -127,42 +138,78 @@ impl Browser {
         strip_line.append(&plus);
         let tabs_button = icon("view-list-symbolic", "Search tabs · Ctrl+K");
         strip_line.append(&tabs_button);
-        let controls = gtk::WindowControls::new(gtk::PackType::End);
-        strip_line.append(&controls);
-        root.append(&strip_line);
-        let chrome = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-        chrome.add_css_class("chrome");
-        chrome.set_margin_start(10);
-        chrome.set_margin_end(10);
-        chrome.set_margin_top(3);
-        chrome.set_margin_bottom(8);
-        let back = icon("go-previous-symbolic", "Back · Alt+Left");
-        let forward = icon("go-next-symbolic", "Forward · Alt+Right");
-        let reload = icon("view-refresh-symbolic", "Reload · Ctrl+R");
-        chrome.append(&back);
-        chrome.append(&forward);
-        chrome.append(&reload);
-        let address = gtk::Entry::builder()
-            .placeholder_text("Search or enter an address")
-            .hexpand(true)
-            .build();
-        address.set_icon_from_icon_name(
-            gtk::EntryIconPosition::Primary,
-            Some("system-search-symbolic"),
+        let address_button = icon(
+            "system-search-symbolic",
+            "Address / search · Ctrl+Alt+L or Ctrl+L",
         );
-        let address_focus = gtk::EventControllerFocus::new();
-        address.add_controller(address_focus.clone());
-        chrome.append(&address);
-        let shield = icon("security-high-symbolic", "Site protection");
-        let star = icon("non-starred-symbolic", "Bookmark this page · Ctrl+D");
+        strip_line.append(&address_button);
         let menu = gtk::MenuButton::builder()
             .icon_name("open-menu-symbolic")
             .tooltip_text("Browser menu")
             .build();
-        chrome.append(&shield);
-        chrome.append(&star);
-        chrome.append(&menu);
-        root.append(&chrome);
+        strip_line.append(&menu);
+        let controls = gtk::WindowControls::new(gtk::PackType::End);
+        strip_line.append(&controls);
+        root.append(&strip_line);
+        let chrome = gtk::Box::new(gtk::Orientation::Vertical, 12);
+        chrome.add_css_class("chrome");
+        chrome.add_css_class("address-card");
+        chrome.set_halign(gtk::Align::Center);
+        chrome.set_valign(gtk::Align::Center);
+        chrome.set_margin_start(24);
+        chrome.set_margin_end(24);
+        let address = gtk::Entry::builder()
+            .placeholder_text("What are you looking for?")
+            .width_chars(1)
+            .max_width_chars(56)
+            .hexpand(true)
+            .build();
+        address.add_css_class("composer-input");
+        address.set_tooltip_text(Some("Search the web or enter a URL"));
+        chrome.append(&address);
+        let address_error = label("", "muted");
+        address_error.set_wrap(true);
+        address_error.set_visible(false);
+        chrome.append(&address_error);
+        let suggestions = gtk::ListBox::new();
+        suggestions.set_selection_mode(gtk::SelectionMode::Single);
+        suggestions.set_activate_on_single_click(true);
+        suggestions.add_css_class("suggestions");
+        let suggestion_scroll = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .max_content_height(264)
+            .propagate_natural_height(true)
+            .child(&suggestions)
+            .visible(false)
+            .build();
+        chrome.append(&suggestion_scroll);
+        let footer = gtk::Box::new(gtk::Orientation::Horizontal, 12);
+        let hint = label("Search or paste a link · Esc to close", "composer-hint");
+        hint.set_hexpand(true);
+        hint.set_xalign(0.0);
+        hint.set_ellipsize(gtk::pango::EllipsizeMode::End);
+        footer.append(&hint);
+        let submit = icon("go-up-symbolic", "Go · Enter");
+        submit.add_css_class("composer-submit");
+        submit.set_sensitive(false);
+        footer.append(&submit);
+        chrome.append(&footer);
+        let address_layer = gtk::Overlay::new();
+        let backdrop = gtk::Button::new();
+        backdrop.add_css_class("address-backdrop");
+        backdrop.set_focusable(false);
+        backdrop.set_hexpand(true);
+        backdrop.set_vexpand(true);
+        address_layer.set_child(Some(&backdrop));
+        address_layer.add_overlay(&chrome);
+        address_layer.set_can_target(false);
+        let composer_revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::Crossfade)
+            .transition_duration(120)
+            .child(&address_layer)
+            .build();
+        composer_revealer.set_can_target(false);
+        overlay.add_overlay(&composer_revealer);
         let progress = gtk::ProgressBar::new();
         root.append(&progress);
         let notification = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -230,13 +277,16 @@ impl Browser {
             stack,
             strip,
             chrome,
+            root,
+            address_layer,
+            composer_revealer,
+            composer_open: Cell::new(false),
+            suggestions,
+            suggestion_scroll,
+            matches: RefCell::new(vec![]),
+            address_button,
             address,
-            address_focus,
-            back,
-            forward,
-            reload,
-            shield,
-            star,
+            address_error,
             progress,
             status,
             panel,
@@ -257,11 +307,87 @@ impl Browser {
             closing: Cell::new(false),
             storage_error: error,
         });
+        let weak = Rc::downgrade(&b);
+        b.suggestions.connect_row_activated(move |_, row| {
+            if let Some(b) = weak.upgrade() {
+                b.activate_suggestion(row.index() as usize);
+            }
+        });
+        let keys = gtk::EventControllerKey::new();
+        keys.set_propagation_phase(gtk::PropagationPhase::Capture);
+        let weak = Rc::downgrade(&b);
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if let Some(b) = weak.upgrade() {
+                if key == gtk::gdk::Key::Down || key == gtk::gdk::Key::Up {
+                    let count = b.matches.borrow().len() as i32;
+                    if count > 0 {
+                        let current = b
+                            .suggestions
+                            .selected_row()
+                            .map(|r| r.index())
+                            .unwrap_or(-1);
+                        let next = if key == gtk::gdk::Key::Down {
+                            (current + 1).min(count - 1)
+                        } else {
+                            current - 1
+                        };
+                        let row = b.suggestions.row_at_index(next);
+                        b.suggestions.select_row(row.as_ref());
+                        if let Some(bounds) = row.and_then(|r| r.compute_bounds(&b.suggestions)) {
+                            let adjustment = b.suggestion_scroll.vadjustment();
+                            let top = f64::from(bounds.y());
+                            let bottom = top + f64::from(bounds.height());
+                            if top < adjustment.value() {
+                                adjustment.set_value(top);
+                            } else if bottom > adjustment.value() + adjustment.page_size() {
+                                adjustment.set_value(bottom - adjustment.page_size());
+                            }
+                        }
+                        return glib::Propagation::Stop;
+                    }
+                }
+            }
+            glib::Propagation::Proceed
+        });
+        b.address.add_controller(keys);
+        for property in ["default-width", "default-height", "maximized"] {
+            let weak = Rc::downgrade(&b);
+            b.window.connect_notify_local(Some(property), move |_, _| {
+                if let Some(b) = weak.upgrade() {
+                    b.dirty.set(true);
+                }
+            });
+        }
         b.actions(app);
         b.menu(&menu);
         b.apply_appearance();
         b.setup_downloads(&b.session);
         b.compile_filter();
+        let weak = Rc::downgrade(&b);
+        b.address_button.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.show_search();
+            }
+        });
+        let weak = Rc::downgrade(&b);
+        backdrop.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.dismiss_address();
+            }
+        });
+        let weak = Rc::downgrade(&b);
+        submit.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.submit_address();
+            }
+        });
+        let weak = Rc::downgrade(&b);
+        b.address.connect_changed(move |entry| {
+            submit.set_sensitive(!entry.text().trim().is_empty());
+            if let Some(b) = weak.upgrade() {
+                b.refresh_suggestions();
+            }
+        });
         let weak = Rc::downgrade(&b);
         plus.connect_clicked(move |_| {
             if let Some(b) = weak.upgrade() {
@@ -275,44 +401,9 @@ impl Browser {
             }
         });
         let weak = Rc::downgrade(&b);
-        b.address.connect_activate(move |entry| {
+        b.address.connect_activate(move |_| {
             if let Some(b) = weak.upgrade() {
-                let input = entry.text().to_string();
-                b.navigate(&input);
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.back.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| b.view()) {
-                v.go_back();
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.forward.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| b.view()) {
-                v.go_forward();
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.reload.connect_clicked(move |_| {
-            if let Some(v) = weak.upgrade().and_then(|b| b.view()) {
-                if v.is_loading() {
-                    v.stop_loading();
-                } else {
-                    v.reload();
-                }
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.star.connect_clicked(move |_| {
-            if let Some(b) = weak.upgrade() {
-                b.bookmark();
-            }
-        });
-        let weak = Rc::downgrade(&b);
-        b.shield.connect_clicked(move |_| {
-            if let Some(b) = weak.upgrade() {
-                b.show_panel("Site");
+                b.submit_address();
             }
         });
         let weak = Rc::downgrade(&b);
@@ -433,6 +524,12 @@ impl Browser {
     pub fn save(&self) {
         let tabs = self.tabs.borrow();
         let mut state = self.state.borrow_mut();
+        let (width, height) = self.window.default_size();
+        state.window = WindowState {
+            width,
+            height,
+            maximized: self.window.is_maximized(),
+        };
         state.tabs = tabs
             .iter()
             .filter(|t| !t.private)
@@ -466,6 +563,10 @@ impl Browser {
         let internal_icon = crate::icons::image(16);
         internal_icon.set_visible(uri == "about:blank");
         tab_content.append(&internal_icon);
+        let favicon = gtk::Image::from_icon_name("text-html-symbolic");
+        favicon.set_pixel_size(16);
+        favicon.set_visible(uri != "about:blank");
+        tab_content.append(&favicon);
         tab_content.append(&title);
         select_button.set_child(Some(&tab_content));
         button.append(&select_button);
@@ -490,6 +591,7 @@ impl Browser {
             button,
             label: title,
             internal_icon,
+            favicon,
             reader: Cell::new(false),
             failed: Cell::new(false),
             picking: Cell::new(false),
@@ -523,6 +625,7 @@ impl Browser {
         tab
     }
     pub fn select(self: &Rc<Self>, id: u64) {
+        self.dismiss_address();
         self.active.set(id);
         self.close_find();
         let Some(tab) = self.tab() else { return };
@@ -546,7 +649,7 @@ impl Browser {
         self.update_chrome();
         self.dirty.set(true);
         if tab.page.borrow().url == "about:blank" {
-            self.address.grab_focus();
+            self.show_search();
         } else if let Some(v) = tab.view.borrow().as_ref() {
             v.grab_focus();
         }
@@ -556,6 +659,7 @@ impl Browser {
         match result {
             Ok(uri) => {
                 let Some(tab) = self.tab() else { return };
+                self.dismiss_address();
                 tab.reader.set(false);
                 tab.failed.set(false);
                 tab.page.borrow_mut().url = uri.clone();
@@ -576,7 +680,14 @@ impl Browser {
                 }
                 self.dirty.set(true);
             }
-            Err(e) => self.notice(&e),
+            Err(e) => {
+                if self.composer_open.get() {
+                    self.address_error.set_text(&e);
+                    self.address_error.set_visible(true);
+                } else {
+                    self.notice(&e);
+                }
+            }
         }
     }
     pub fn close_tab(self: &Rc<Self>, id: u64) {
@@ -608,7 +719,11 @@ impl Browser {
     pub fn update_chrome(&self) {
         let Some(tab) = self.tab() else { return };
         let page = tab.page.borrow();
-        if !self.address_focus.contains_focus() {
+        self.address_button.set_tooltip_text(Some(&format!(
+            "{}\nAddress / search · Ctrl+Alt+L or Ctrl+L",
+            page.url
+        )));
+        if !self.composer_open.get() {
             self.address.set_text(if page.url == "about:blank" {
                 ""
             } else {
@@ -620,51 +735,21 @@ impl Browser {
             if tab.private { "Private · " } else { "" },
             page.title
         )));
-        self.address.set_icon_from_icon_name(
-            gtk::EntryIconPosition::Primary,
-            Some(if tab.private {
-                "view-conceal-symbolic"
-            } else if page.url.starts_with("https://") && !tab.failed.get() {
-                "channel-secure-symbolic"
-            } else {
-                "dialog-information-symbolic"
-            }),
-        );
-        self.star.set_icon_name(
-            if self
-                .state
-                .borrow()
-                .bookmarks
-                .iter()
-                .any(|p| p.url == page.url)
-            {
-                "starred-symbolic"
-            } else {
-                "non-starred-symbolic"
-            },
-        );
         if let Some(v) = tab.view.borrow().as_ref() {
-            self.back.set_sensitive(v.can_go_back());
-            self.forward.set_sensitive(v.can_go_forward());
             self.progress.set_fraction(if v.is_loading() {
                 v.estimated_load_progress()
             } else {
                 0.0
             });
-            self.reload.set_icon_name(if v.is_loading() {
-                "process-stop-symbolic"
-            } else {
-                "view-refresh-symbolic"
-            });
         } else {
-            self.back.set_sensitive(false);
-            self.forward.set_sensitive(false);
             self.progress.set_fraction(0.0);
         }
         for t in self.tabs.borrow().iter() {
             let p = t.page.borrow();
             t.internal_icon
                 .set_visible(p.url == "about:blank" || t.reader.get());
+            t.favicon
+                .set_visible(p.url != "about:blank" && !t.reader.get());
             t.label.set_text(&format!(
                 "{}{}{}",
                 if t.private { "◌ " } else { "" },
@@ -682,60 +767,24 @@ impl Browser {
         area.set_vexpand(true);
         area.set_halign(gtk::Align::Center);
         area.set_valign(gtk::Align::Center);
-        area.append(&label(
-            if tab.private {
-                "PRIVATE BROWSING"
-            } else {
-                "A LITTLE QUIETER"
-            },
-            "eyebrow",
-        ));
-        area.append(&label("Room to explore.", "brand"));
-        area.append(&label(
-            if tab.private {
-                "This tab keeps no history or session. Downloads remain on disk."
-            } else {
-                "Your next thought starts here."
-            },
-            "muted",
-        ));
-        let entry = gtk::Entry::builder()
-            .placeholder_text("Search the web or enter an address")
-            .width_chars(48)
-            .build();
-        area.append(&entry);
+        let start = gtk::Button::with_label("Search or paste a link");
         let weak = Rc::downgrade(self);
-        entry.connect_activate(move |e| {
+        start.connect_clicked(move |_| {
             if let Some(b) = weak.upgrade() {
-                b.navigate(&e.text());
+                b.show_search();
             }
         });
-        let links = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-        for (text, url) in [
-            ("Omarchy", "https://omarchy.org"),
-            ("GitHub", "https://github.com"),
-            ("Bookmarks", ""),
-        ] {
-            let btn = gtk::Button::with_label(text);
-            let weak = Rc::downgrade(self);
-            btn.connect_clicked(move |_| {
-                if let Some(b) = weak.upgrade() {
-                    if url.is_empty() {
-                        b.show_panel("Bookmarks");
-                    } else {
-                        b.navigate(url);
-                    }
-                }
-            });
-            links.append(&btn);
+        area.append(&start);
+        area.append(&label("Ctrl+Alt+L", "muted"));
+        if tab.private {
+            let privacy = label(
+                "Private tab · History and session are not saved.\nDownloads remain on disk.",
+                "muted",
+            );
+            privacy.set_wrap(true);
+            privacy.set_justify(gtk::Justification::Center);
+            area.append(&privacy);
         }
-        area.append(&links);
-        let hint = label(
-            "Ctrl+L  address     Ctrl+T  new tab     Ctrl+K  find a tab",
-            "muted",
-        );
-        hint.set_margin_top(24);
-        area.append(&hint);
         tab.holder.append(&area);
     }
     pub fn close_find(&self) {
@@ -744,6 +793,103 @@ impl Browser {
             if let Some(f) = v.find_controller() {
                 f.search_finish();
             }
+        }
+    }
+    fn refresh_suggestions(&self) {
+        if !self.composer_open.get() {
+            return;
+        }
+        while let Some(row) = self.suggestions.first_child() {
+            self.suggestions.remove(&row);
+        }
+        let tabs: Vec<_> = self
+            .tabs
+            .borrow()
+            .iter()
+            .map(|t| (t.id, t.page.borrow().clone(), t.private))
+            .collect();
+        let private = self.tab().is_some_and(|t| t.private);
+        let matches =
+            crate::suggestions::find(&self.address.text(), &self.state.borrow(), &tabs, private);
+        for item in &matches {
+            let row = gtk::Box::new(gtk::Orientation::Vertical, 3);
+            for (text, class) in [
+                (&item.title[..], ""),
+                (&format!("{} · {}", item.caption(), item.url), "muted"),
+            ] {
+                let line = label(text, class);
+                line.set_xalign(0.0);
+                line.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                line.set_max_width_chars(1);
+                line.set_hexpand(true);
+                row.append(&line);
+            }
+            self.suggestions.append(&row);
+        }
+        self.suggestions.unselect_all();
+        self.suggestion_scroll.set_visible(!matches.is_empty());
+        *self.matches.borrow_mut() = matches;
+    }
+    fn activate_suggestion(self: &Rc<Self>, index: usize) {
+        let item = self.matches.borrow().get(index).cloned();
+        if let Some(item) = item {
+            match item.kind {
+                crate::suggestions::Kind::Tab(id) => self.select(id),
+                _ => self.navigate(&item.url),
+            }
+        }
+    }
+    fn submit_address(self: &Rc<Self>) {
+        if let Some(row) = self.suggestions.selected_row() {
+            self.activate_suggestion(row.index() as usize);
+        } else {
+            self.navigate(&self.address.text());
+        }
+    }
+    pub fn show_search(&self) {
+        if !self.composer_open.get() {
+            self.address.set_text("");
+        }
+        self.focus_composer();
+    }
+    pub fn show_address(&self) {
+        if !self.composer_open.get() {
+            if let Some(tab) = self.tab() {
+                let page = tab.page.borrow();
+                self.address.set_text(if page.url == "about:blank" {
+                    ""
+                } else {
+                    &page.url
+                });
+            }
+        }
+        self.focus_composer();
+    }
+    fn focus_composer(&self) {
+        self.address_error.set_visible(false);
+        self.chrome.set_visible(true);
+        self.root.set_sensitive(false);
+        self.composer_open.set(true);
+        self.address_layer.set_can_target(true);
+        self.composer_revealer.set_can_target(true);
+        self.composer_revealer.set_reveal_child(true);
+        self.refresh_suggestions();
+        self.address.grab_focus();
+        self.address.select_region(0, -1);
+    }
+    pub fn dismiss_address(&self) {
+        if !self.composer_open.get() {
+            return;
+        }
+        self.composer_open.set(false);
+        self.address_layer.set_can_target(false);
+        self.composer_revealer.set_can_target(false);
+        self.composer_revealer.set_reveal_child(false);
+        self.root.set_sensitive(true);
+        if let Some(v) = self.view() {
+            v.grab_focus();
+        } else {
+            self.address_button.grab_focus();
         }
     }
     pub fn apply_appearance(&self) {
@@ -764,6 +910,9 @@ impl Browser {
             ("close", vec!["<Control>w"]),
             ("reopen", vec!["<Control><Shift>t"]),
             ("address", vec!["<Control>l"]),
+            ("search", vec!["<Control><Alt>l"]),
+            ("site", vec![]),
+            ("stop", vec![]),
             ("tabs", vec!["<Control>k"]),
             ("history", vec!["<Control>h"]),
             ("bookmarks", vec!["<Control>b"]),
@@ -801,6 +950,9 @@ impl Browser {
         }
     }
     pub fn command(self: &Rc<Self>, name: &str) {
+        if name != "address" && name != "search" && name != "escape" {
+            self.dismiss_address();
+        }
         match name {
             "new" => {
                 self.new_tab("about:blank", false, true);
@@ -809,9 +961,13 @@ impl Browser {
                 self.new_tab("about:blank", true, true);
             }
             "close" => self.close_tab(self.active.get()),
-            "address" => {
-                self.address.grab_focus();
-                self.address.select_region(0, -1);
+            "address" => self.show_address(),
+            "search" => self.show_search(),
+            "site" => self.show_panel("Site"),
+            "stop" => {
+                if let Some(v) = self.view() {
+                    v.stop_loading();
+                }
             }
             "reopen" => {
                 let p = self.closed.borrow_mut().pop();
@@ -868,6 +1024,10 @@ impl Browser {
                 }
             }
             "escape" => {
+                if self.composer_open.get() {
+                    self.dismiss_address();
+                    return;
+                }
                 self.close_find();
                 self.panel.set_visible(false);
                 if self.window.is_fullscreen() {
@@ -929,9 +1089,19 @@ impl Browser {
         let menu = gio::Menu::new();
         for items in [
             vec![
+                ("Search the web", "search"),
+                ("Edit address", "address"),
                 ("New tab", "new"),
                 ("New private tab", "private"),
                 ("Reopen closed tab", "reopen"),
+            ],
+            vec![
+                ("Back", "back"),
+                ("Forward", "forward"),
+                ("Reload", "reload"),
+                ("Stop loading", "stop"),
+                ("Site information / protection", "site"),
+                ("Bookmark this page", "bookmark"),
             ],
             vec![
                 ("Find a tab", "tabs"),
