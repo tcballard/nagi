@@ -1,52 +1,31 @@
-//! The UI and CLI share one small, atomic JSON settings document. The CLI can
-//! change it while Nagi is running; the app reloads it on its existing timer.
-use crate::core::{state_dir, Settings};
-use std::{
-    fs::{self, File, OpenOptions},
-    io::{self, Write},
-    os::unix::fs::{OpenOptionsExt, PermissionsExt},
-    path::PathBuf,
-};
+//! CLI and GTK use the same validated transaction path.
+use crate::{core::{state_dir, Settings}, config_store::{self, Document}};
+use std::path::PathBuf;
 
-pub fn path() -> PathBuf {
-    state_dir().join("settings.json")
-}
-
+pub fn path() -> PathBuf { state_dir().join("settings.json") }
 pub fn read() -> Result<Option<Settings>, String> {
-    let path = path();
-    if !path.exists() {
-        return Ok(None);
-    }
-    let data = fs::read(&path).map_err(|e| format!("Could not read settings: {e}"))?;
-    let settings: Settings = serde_json::from_slice(&data)
-        .map_err(|e| format!("Invalid settings file (preserved): {e}"))?;
-    validate(&settings)?;
-    Ok(Some(settings))
+    Ok(config_store::read(&path())?.map(|d| d.settings))
 }
-
-pub fn write(settings: &Settings) -> Result<(), String> {
-    validate(settings)?;
-    let path = path();
-    let dir = path.parent().ok_or("Missing settings directory")?;
-    fs::create_dir_all(dir).map_err(|e| e.to_string())?;
-    fs::set_permissions(dir, fs::Permissions::from_mode(0o700)).map_err(|e| e.to_string())?;
-    let tmp = path.with_extension("json.tmp");
-    let data = serde_json::to_vec_pretty(settings).map_err(|e| e.to_string())?;
-    let mut f = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .truncate(true)
-        .mode(0o600)
-        .open(&tmp)
-        .map_err(|e| e.to_string())?;
-    f.write_all(&data)
-        .and_then(|_| f.sync_all())
-        .map_err(|e| e.to_string())?;
-    fs::rename(&tmp, &path).map_err(|e| e.to_string())?;
-    File::open(dir)
-        .and_then(|d| d.sync_all())
-        .map_err(|e| e.to_string())?;
-    Ok(())
+pub fn document() -> Result<Document, String> {
+    if let Some(d) = config_store::read(&path())? { return Ok(d); }
+    Ok(Document::initial(crate::storage::read(&state_dir().join("state.json"))?.settings))
+}
+pub fn change(key: &str, value: &str) -> Result<Settings, String> {
+    let initial = document()?;
+    Ok(config_store::transact(&path(), &initial.settings, None, false,
+        |d| set(&mut d.settings, key, value))?.settings)
+}
+pub fn schema() -> serde_json::Value {
+    serde_json::json!({"api":1,"schema":1,"settings":{
+        "tabs.layout":{"type":"string","enum":["Top","Left"],"default":"Top"},
+        "features.link_previews":{"type":"boolean","default":false},
+        "search.engine":{"type":"string","enum":["DuckDuckGo","Google","Brave"],"default":"DuckDuckGo"},
+        "appearance":{"type":"string","enum":["Theme","Dark","Light"],"default":"Theme"},
+        "restore_tabs":{"type":"boolean","default":true},
+        "block_trackers":{"type":"boolean","default":true},
+        "zoom":{"type":"number","minimum":0.5,"maximum":2.0,"default":1.0},
+        "shortcuts":{"actions":OVERRIDES,"reset":"default"}
+    }})
 }
 
 pub const OVERRIDES: &[&str] = &[
@@ -210,65 +189,57 @@ fn parse_bool(s: &str) -> Result<bool, String> {
 }
 
 pub fn cli(args: &[String]) -> i32 {
-    let mut settings = match read() {
-        Ok(Some(s)) => s,
-        Ok(None) => match crate::storage::read(&state_dir().join("state.json")) {
-            Ok(s) => s.settings,
-            Err(e) => {
-                eprintln!("{e}");
-                return 1;
-            }
-        },
-        Err(e) => {
-            eprintln!("{e}");
-            return 1;
-        }
-    };
-    match args {
-        [cmd] if cmd == "get" => {
-            println!("{}", serde_json::to_string_pretty(&settings).unwrap());
-            0
-        }
-        [cmd, key] if cmd == "get" => {
-            let json = serde_json::to_value(&settings).unwrap();
-            let found = match key.as_str() {
-                "tabs.layout" => Some(json["tab_layout"].clone()),
-                "features.link_previews" => Some(json["link_previews"].clone()),
-                "search.engine" => Some(json["search"].clone()),
-                "appearance" => Some(json["dark"].clone()),
-                "restore_tabs" => Some(json["restore"].clone()),
-                "block_trackers" => Some(json["block"].clone()),
-                "zoom" => Some(json["zoom"].clone()),
-                _ if key.starts_with("shortcuts.") && OVERRIDES.contains(&&key[10..]) => {
-                    Some(json["shortcuts"][&key[10..]].clone())
-                }
-                _ => None,
-            };
-            if let Some(v) = found {
-                println!("{v}");
-                0
-            } else {
-                eprintln!("Unknown setting: {key}");
-                2
-            }
-        }
-        [cmd, key, value] if cmd == "set" => {
-            match set(&mut settings, key, value).and_then(|_| write(&settings)) {
-                Ok(()) => {
-                    println!("{}", serde_json::to_string_pretty(&settings).unwrap());
-                    0
-                }
-                Err(e) => {
-                    eprintln!("{e}");
-                    2
-                }
-            }
-        }
-        _ => {
-            eprintln!("Usage: nagi config get [key] | nagi config set KEY VALUE");
-            2
+    match run(args) {
+        Ok(value) => { println!("{}", serde_json::to_string_pretty(&value).unwrap()); 0 }
+        Err(e) => { eprintln!("{}", serde_json::json!({"error":e})); 2 }
+    }
+}
+fn run(args: &[String]) -> Result<serde_json::Value, String> {
+    if args == ["schema"] { return Ok(schema()); }
+    let initial = document()?;
+    if args == ["inspect"] { return serde_json::to_value(initial).map_err(|e| e.to_string()); }
+    if args == ["get"] { return serde_json::to_value(initial.settings).map_err(|e| e.to_string()); }
+    if args.first().is_some_and(|a| a == "get") && args.len() == 2 {
+        let json = serde_json::to_value(&initial.settings).unwrap();
+        let key = match args[1].as_str() {
+            "tabs.layout" => "tab_layout", "features.link_previews" => "link_previews",
+            "search.engine" => "search", "appearance" => "dark", "restore_tabs" => "restore",
+            "block_trackers" => "block", "zoom" => "zoom",
+            k if k.starts_with("shortcuts.") && OVERRIDES.contains(&&k[10..]) => return Ok(json["shortcuts"][&k[10..]].clone()),
+            _ => return Err("Unknown setting".into()),
+        };
+        return Ok(json[key].clone());
+    }
+    let mut expected = None;
+    let mut dry_run = false;
+    let mut positional = Vec::new();
+    let mut iter = args.iter();
+    while let Some(arg) = iter.next() {
+        match arg.as_str() {
+            "--dry-run" => dry_run = true,
+            "--if-revision" => expected = Some(iter.next().ok_or("Missing revision")?.parse::<u64>().map_err(|_| "Invalid revision")?),
+            _ => positional.push(arg.as_str()),
         }
     }
+    let doc = config_store::transact(&path(), &initial.settings, expected, dry_run, |d| {
+        match positional.as_slice() {
+            ["set", key, value] => set(&mut d.settings, key, value),
+            ["apply", json] => {
+                let changes: std::collections::BTreeMap<String, serde_json::Value> = serde_json::from_str(json).map_err(|e| e.to_string())?;
+                for (key, value) in changes {
+                    let text = value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string());
+                    set(&mut d.settings, &key, &text)?;
+                }
+                Ok(())
+            }
+            ["undo"] => {
+                d.settings = d.history.last().ok_or("No configuration history")?.settings.clone();
+                Ok(())
+            }
+            _ => Err("Usage: nagi config schema|get [KEY]|inspect|set KEY VALUE|apply JSON|undo [--dry-run] [--if-revision N]".into()),
+        }
+    })?;
+    serde_json::to_value(doc).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -288,3 +259,4 @@ mod tests {
         assert_eq!(s.tab_layout, "Left");
     }
 }
+

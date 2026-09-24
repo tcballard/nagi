@@ -1,5 +1,6 @@
 mod browser;
 mod config;
+mod config_store;
 mod core;
 mod icons;
 mod import;
@@ -13,11 +14,7 @@ use std::{cell::RefCell, rc::Rc};
 fn main() -> gtk::glib::ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1).is_some_and(|a| a == "config") {
-        return if config::cli(&args[2..]) == 0 {
-            gtk::glib::ExitCode::SUCCESS
-        } else {
-            gtk::glib::ExitCode::FAILURE
-        };
+        return gtk::glib::ExitCode::from(config::cli(&args[2..]) as u8);
     }
     if args.iter().any(|a| a == "--version") {
         println!("Nagi {}", core::VERSION);
@@ -102,3 +99,4 @@ fn main() -> gtk::glib::ExitCode {
     }
     code
 }
+
