@@ -3,7 +3,8 @@
 ## 2026-09-24 — validation before expansion
 
 Source: Tom's Next-Phase Handoff, 24 September 2026.
-Status: threshold confirmation pending; all gates NOT RUN. No gate has passed.
+Status: Tom confirmed the G3/G4 hold-and-retest recommendations and keeping all
+52 compatibility sites on 2026-09-24. All gates remain NOT RUN; no gate has passed.
 
 Feature freeze: no new user-facing features, surfaces or extension capabilities.
 Only A1–A7 and compatibility fixes explicitly approved by Tom are exceptions.
@@ -13,14 +14,14 @@ local; export requires an explicit user command. Never commit credentials,
 authenticated profiles or private screenshots. Review baseline artifacts before
 committing them; redact sensitive content and record redactions.
 
-## Proposed thresholds (from the handoff; not yet confirmed)
+## Thresholds (handoff plus confirmed G3/G4 dispositions)
 
 | Gate | Pass | Middle | Fail / action |
 |---|---|---|---|
 | G1, end of week 2 | Pass rate >=90% and zero blocked critical workflows | 75–90%, or blocked workflows limited to DRM media: position as an agent-shaped work browser, retaining Chromium for streaming | <75%, or any blocked critical work workflow: stop feature work and evaluate pivot |
 | G2, after A3 and T4 | All fixtures blocked and zero successful manual attacks left unfixed | None | No demo or testers until fixed |
-| G3, after A5 and T5 | Nagi-only chrome tasks >=80% first-try success; feasible-in-both Nagi success >= baseline +15 percentage points | Nagi-only >=80%, without a clear feasible-in-both win: pitch chrome control only | Nagi-only <60%: fix API before promotion |
-| G4, cohort day 30 | >=1/3 retained as default AND crashes <1 per 100 active hours | 1/5–1/3 retained: another 30-day cycle fixing top three switch causes | <1/5 retained: pivot evaluation |
+| G3, after A5 and T5 | Nagi-only chrome tasks >=80% first-try success; feasible-in-both Nagi success >= baseline +15 percentage points | Nagi-only >=80%, without a clear feasible-in-both win: pitch chrome control only | Nagi-only <60%: fix API before promotion; 60–<80%: hold promotion, improve API and retest (confirmed) |
+| G4, cohort day 30 | >=1/3 retained as default AND crashes <1 per 100 active hours | 1/5–1/3 retained: another 30-day cycle fixing top three switch causes | <1/5 retained: pivot evaluation; >=1/3 retained with crashes >=1 per 100 hours: hold, fix reliability and retest (confirmed) |
 
 A missing export counts as not retained. Freeze the enrolled cohort denominator
 before collecting retention outcomes. Zero active hours cannot establish a crash
@@ -35,25 +36,35 @@ proof that those workflows work.
 Pivot evaluation: at most two weeks assessing Firefox as a target for the API,
 schema, approval model and harness; record go/no-go. Do not start a Chromium fork.
 
-## Decisions required from Tom before thresholds are locked
+## Confirmed decisions — 2026-09-24
 
-1. G1 precedence: proposed interpretation is critical-work failure or <75%
-   overrides the DRM middle condition; otherwise >=90% with no blocked workflows
-   passes, and the remaining >=75% results are middle. Confirm exact boundary
-   and how unauthenticated critical workflows prevent a premature gate decision.
-2. G3 does not classify 60% through <80% Nagi-only success. Proposed disposition:
-   hold promotion, improve API and rerun. Confirm that the feasible-in-both middle
-   covers every result below the +15 percentage-point pass threshold.
-3. G4 does not classify >=1/3 retention with >=1 crash per 100 hours. Proposed
-   disposition: hold, fix reliability and rerun. Clarify middle-band crash
-   requirements and the exact 1/3 boundary (proposed: pass takes precedence only
-   if its crash condition also holds).
-4. Appendix 1 contains 52 entries, not 50. Which two should be dropped? Supply
-   the bank, Mastodon, Atlassian tenant and local development-server URLs, plus
-   critical flags, as part of T1. No guessed bank or tenant.
-5. A5: specify the agent CLI/model and approve the 50 task candidates before
-   measured runs. Human approvals required by A3 must be reflected honestly in
-   the first-try/no-human-help metric; do not bypass consent for evaluation.
+Tom's response: "Yeah okay I agree, and keep all 52".
+
+- G3: 60% through <80% Nagi-only first-try success means hold promotion,
+  improve the API and retest.
+- G4: passing retention with failing reliability means hold, fix reliability
+  and retest; retention alone cannot pass the gate.
+- A1/T1: retain all 52 Appendix 1 entries. This replaces the original 50-site
+  count in the A1 scope and T1 acceptance criterion. T1 still requires review
+  of URLs, critical flags and one-time logins. This does not change A5's
+  separate requirement for 50 evaluation tasks.
+
+## Remaining inputs (do not block A1/A2 implementation)
+
+- G1 adjudication: resolve failure precedence over the DRM middle condition
+  and how missing authenticated critical-workflow evidence prevents a premature
+  decision. Proposed: critical-work failure or <75% overrides DRM; >=90% with
+  no blocked workflows passes; remaining >=75% results are middle.
+- G3: explicitly define "no clear win" as below the +15 percentage-point
+  threshold before evaluation data arrives.
+- G4: clarify the middle-band crash requirement before cohort results arrive.
+  Exact 1/3 retention meets the retention component of pass, but the strict
+  crash requirement must also hold.
+- T1: supply bank, Mastodon, Atlassian tenant and local development-server URLs,
+  plus final critical flags. No guessed bank or tenant.
+- A5/T5: specify the agent CLI/model and approve the 50 task candidates before
+  measured runs. Human approvals required by A3 must be reflected honestly in
+  the first-try/no-human-help metric; do not bypass consent for evaluation.
 
 ## Execution and dependencies
 
