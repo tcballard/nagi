@@ -24,12 +24,12 @@ nagi
 ```
 
 **Preview pending:** an actual Omarchy/Hyprland screenshot will go in `preview.png`
-after on-device testing. This [automated browser capture](docs/composer.png)
-shows the development search composer over a local test page on Ubuntu/Xvfb.
+after on-device testing. This [automated browser capture](docs/polish-suggestions.png)
+shows local tab suggestions in the development composer on Ubuntu/Xvfb.
 [Verification](VERIFICATION.md) · [Build and configuration](#build-and-run-on-omarchy--arch) ·
 [Keyboard shortcuts](#keyboard) · [Known limits](#status).
 
-![Nagi search composer over a local test page on Ubuntu Xvfb](docs/composer.png)
+![Nagi composer with local tab suggestions on Ubuntu Xvfb](docs/polish-suggestions.png)
 
 ## Included
 
@@ -141,6 +141,10 @@ stay on your machine: typing sends no request to a search service. Private
 tabs suggest only other private tabs and explicit bookmarks, never normal history.
 
 The composer searches the web; it does not send prompts to an AI service.
+Its 120ms fade follows GTK’s animation setting. Window size and maximized state
+are restored on launch; your compositor’s tiling rules still apply.
+
+[Quiet new tab](docs/polish-new-tab.png) · [Narrow composer](docs/polish-narrow.png)
 These changes are not in the v0.0.2 download above. From an existing checkout:
 
 ```sh

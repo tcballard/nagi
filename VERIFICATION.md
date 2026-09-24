@@ -3,7 +3,51 @@
 Target: Omarchy 4 / Hyprland. An actual Omarchy desktop has not been exercised.
 This is an early versioned preview; see the release notes for feature limits.
 
-## Search composer refinement
+## Composer and browser polish
+
+Runtime source: `b7c82285fa1753b1604babe9be1b89708bf6ac83`.
+[Workflow 35988075693](https://github.com/tcballard/nagi/actions/runs/35988075693)
+checks the current polish. The final documentation commit adds captures and
+notes only; it does not change the tested source.
+
+Linux passes formatting, eight Rust tests, debug/release builds, approved-icon
+pixel checks, desktop validation and the real GTK/Xvfb browser fixture.
+The fixture exercises local tab switching and history selection, unchanged
+plain-Enter navigation, page-focus restoration, normal/private session
+separation, native downloads, a 520px-wide composer and a real resize/restart
+that restores 1040 × 720. A second launch disables GTK animations and checks
+composer navigation and dismissal. A screenshot pixel assertion verifies both
+loaded tabs retain their website favicon after same-site navigation.
+
+Pure tests cover case-insensitive matching, URL deduplication, tab priority,
+private-tab isolation, exclusion of normal history from private suggestions,
+explicit bookmarks in private mode, empty input, old state defaults and invalid
+window-size bounds. The Arch job also passed its ordinary-user package build,
+tests, pacman installation, version/desktop checks and removal.
+Suggestions use local records only. Private website icons
+use the private WebKit network session.
+
+Visually inspected actual Ubuntu/X11 captures:
+[local suggestions](docs/polish-suggestions.png),
+[quiet new tab](docs/polish-new-tab.png),
+[narrow composer](docs/polish-narrow.png), and
+[cached site icons](docs/polish-favicons.png).
+The green squares are the fixture website's favicon, not replacement app icons.
+
+The 120ms crossfade uses GtkRevealer and GTK's animation preference. Maximized
+state is saved/restored through GTK; maximized/fullscreen behavior under a real
+window manager was not exercised by Xvfb. Live Hyprland, fractional scaling,
+IME and accessibility remain device checks. This work stays in PR #2 and does
+not publish a new version.
+
+Capture SHA-256:
+
+- `polish-suggestions.png`: `10a7287dfacb0ad0a043233363f8237bcfa87aab31c90649e070846fd59224f8`
+- `polish-new-tab.png`: `0986415464f67dcece5c17eb6b7b8185416355c92870aea3a83ba6aaae63d9f3`
+- `polish-narrow.png`: `415858bfce11697a3d8fe3305df45d6db42856d25e7504a16bd0fa29a99faef7`
+- `polish-favicons.png`: `b9863e0322a850ddc0acbcdfb60d787e81d72b75c5406a814cdde285103e88c2`
+
+## Search composer refinement (historical)
 
 Runtime source: `84df0d0a429f5806636d660ad19230a4236358bd`.
 [Workflow 35932049027](https://github.com/tcballard/nagi/actions/runs/35932049027)
