@@ -15,11 +15,11 @@ native tabs, bookmarks and a reading view; keep your history and settings on
 your own machine. It uses GTK4 and the system WebKitGTK engine, and follows
 Omarchy's current colours. Inspired by [Search](https://github.com/driceroland/Search).
 
-**Try v0.0.2 on x86_64 Omarchy / Arch:**
+**Try v0.0.3 on x86_64 Omarchy / Arch:**
 
 ```sh
-curl -fLO https://github.com/tcballard/nagi/releases/download/v0.0.2/nagi-0.0.2-1-x86_64.pkg.tar.zst
-sudo pacman -U ./nagi-0.0.2-1-x86_64.pkg.tar.zst
+curl -fLO https://github.com/tcballard/nagi/releases/download/v0.0.3/nagi-0.0.3-1-x86_64.pkg.tar.zst
+sudo pacman -U ./nagi-0.0.3-1-x86_64.pkg.tar.zst
 nagi
 ```
 
@@ -50,7 +50,7 @@ shows local tab suggestions in the development composer on Ubuntu/Xvfb.
 
 ## Status
 
-Early preview, v0.0.2. See [VERIFICATION.md](VERIFICATION.md)
+Early preview, v0.0.3. See [VERIFICATION.md](VERIFICATION.md)
 for the exact builds and runtime checks performed. Intended target: Omarchy 4
 on Hyprland. Live acceptance on an Omarchy machine is still required.
 
@@ -243,10 +243,6 @@ if you chose to change it.
 See [CLI personalisation and control](docs/agent-development.md) for the current
 development contract, transactions, upgrade/downgrade handling and validation.
 
-The CLI-first development series is stacked for review: [transactional settings
-#4](https://github.com/tcballard/nagi/pull/4), [personal profiles
-#5](https://github.com/tcballard/nagi/pull/5), [scoped browser control
-#6](https://github.com/tcballard/nagi/pull/6) and [personal extensions
-#7](https://github.com/tcballard/nagi/pull/7), following settings/layout PR #3.
-These features are not in the v0.0.2 release above. Personal Nagi extensions are
+The CLI-first features ship in v0.0.3: transactional settings, portable personal
+profiles, scoped browser control and approved personal extensions. Personal Nagi extensions are
 distinct from Chrome/Firefox extension compatibility, which remains unsupported.
