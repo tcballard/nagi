@@ -17,6 +17,9 @@ pub struct Settings {
     pub block: bool,
     pub dark: String,
     pub zoom: f64,
+    pub tab_layout: String,
+    pub link_previews: bool,
+    pub shortcuts: BTreeMap<String, String>,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -26,6 +29,9 @@ impl Default for Settings {
             block: true,
             dark: "Theme".into(),
             zoom: 1.0,
+            tab_layout: "Top".into(),
+            link_previews: false,
+            shortcuts: BTreeMap::new(),
         }
     }
 }
