@@ -37,6 +37,8 @@ fn append(path: &Path, site: &str, reason: &str, now: u64) -> Result<(), String>
         .mode(0o600)
         .open(path)
         .map_err(|e| e.to_string())?;
+    file.set_permissions(fs::Permissions::from_mode(0o600))
+        .map_err(|e| e.to_string())?;
     // A single append of a bounded JSON line avoids interleaved records from
     // concurrent prompts. Lock also serializes with any future writers.
     file.lock().map_err(|e| e.to_string())?;
