@@ -77,7 +77,9 @@ fn period(s: &str) -> Result<u64, String> {
         return Err("--since expects a number of days or hours, such as 7d or 24h".into());
     };
     let count = digits.parse::<u64>().map_err(|_| "Invalid --since value")?;
-    count.checked_mul(scale).ok_or("--since value is too large".into())
+    count
+        .checked_mul(scale)
+        .ok_or("--since value is too large".into())
 }
 
 fn summary(rows: &[Switch], since: u64, markdown: bool) -> String {
@@ -111,7 +113,7 @@ fn summary(rows: &[Switch], since: u64, markdown: bool) -> String {
         format!("Nagi browser switches: {}\n", included.len())
     };
     for (title, values) in [
-        ("By site/task", ranked(by_site).into_iter().map(|(k, n)| (k, n)).collect::<Vec<_>>()),
+        ("By site/task", ranked(by_site)),
         ("By reason keyword", ranked(by_word)),
     ] {
         out.push_str(&format!("\n{title}\n"));
@@ -121,21 +123,34 @@ fn summary(rows: &[Switch], since: u64, markdown: bool) -> String {
     }
     out.push_str("\nTop 10 causes\n");
     for ((site, reason), count) in ranked(causes).into_iter().take(10) {
-        out.push_str(&format!("  {count:>3}  {} — {}\n", safe(&site, markdown), safe(&reason, markdown)));
+        out.push_str(&format!(
+            "  {count:>3}  {} — {}\n",
+            safe(&site, markdown),
+            safe(&reason, markdown)
+        ));
     }
     out
 }
 
 fn safe(value: &str, markdown: bool) -> String {
-    let value = value.replace(['\n', '\r', '\t'], " ");
-    if markdown { value.replace('|', "\\|") } else { value }
+    let value = value
+        .replace('\n', " ")
+        .replace('\r', " ")
+        .replace('\t', " ");
+    if markdown {
+        value.replace('|', "\\|")
+    } else {
+        value
+    }
 }
 
 fn prompt(label: &str) -> Result<String, String> {
     eprint!("{label}: ");
     io::stderr().flush().map_err(|e| e.to_string())?;
     let mut input = String::new();
-    io::stdin().read_line(&mut input).map_err(|e| e.to_string())?;
+    io::stdin()
+        .read_line(&mut input)
+        .map_err(|e| e.to_string())?;
     Ok(input.trim().into())
 }
 
@@ -155,12 +170,19 @@ fn run(args: &[String]) -> Result<String, String> {
             }
             i += 1;
         }
-        return Ok(summary(&read(&path())?, core::now().saturating_sub(since), markdown));
+        return Ok(summary(
+            &read(&path())?,
+            core::now().saturating_sub(since),
+            markdown,
+        ));
     }
     let (site, reason) = match args {
         [] => (prompt("Site or task")?, prompt("Reason")?),
         [site, reason] if !site.starts_with('-') => (site.clone(), reason.clone()),
-        _ => return Err("Usage: nagi log-switch [SITE_OR_TASK REASON] | --summary [--since 7d] [--markdown]".into()),
+        _ => return Err(
+            "Usage: nagi log-switch [SITE_OR_TASK REASON] | --summary [--since 7d] [--markdown]"
+                .into(),
+        ),
     };
     append(&path(), &site, &reason, core::now())?;
     Ok("Switch logged locally.\n".into())
@@ -192,7 +214,10 @@ mod tests {
         append(&path, "GitHub", "Login broken", 20).unwrap();
         append(&path, "Docs", "Slow load", 30).unwrap();
         assert!(append(&path, "", "broken", 40).is_err());
-        assert_eq!(fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(
+            fs::metadata(&path).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
         let output = summary(&read(&path).unwrap(), 15, true);
         assert!(output.contains("Switches: 2"));
         assert!(output.contains("GitHub — Login broken"));
