@@ -565,19 +565,9 @@ impl Browser {
         }
         b
     }
-    pub fn persist_settings(&self) {
-        let settings = self.state.borrow().settings.clone();
-        match config::write(&settings) {
-            Ok(()) => *self.settings_snapshot.borrow_mut() = settings,
-            Err(e) => self.notice(&format!("Could not save settings: {e}")),
-        }
-        self.dirty.set(true);
-    }
     pub fn set_preference(self: &Rc<Self>, key: &str, value: &str) -> Result<(), String> {
-        let mut next = self.state.borrow().settings.clone();
-        config::set(&mut next, key, value)?;
         let previous = self.state.borrow().settings.clone();
-        config::write(&next)?;
+        let next = config::change(key, value)?;
         self.state.borrow_mut().settings = next.clone();
         *self.settings_snapshot.borrow_mut() = next.clone();
         self.apply_tab_layout();

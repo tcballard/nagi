@@ -29,9 +29,15 @@ jobs:
           cache-on-failure: true
       - name: Validate approved icon pixels
         run: python3 tests/icons.py
-      - run: cargo fmt --check
+      - name: Check formatting
+        run: |
+          mkdir -p target/evidence
+          cargo fmt --all
+          git diff --binary -- src > target/evidence/format.patch
+          git diff --exit-code -- src
       - run: cargo test --locked
       - run: cargo build --locked
+      - run: python3 tests/config_transactions.py
       - name: Validate desktop launcher
         run: desktop-file-validate packaging/io.github.tcballard.Nagi.desktop
       - name: Exercise real browser with local fixtures
@@ -119,3 +125,4 @@ jobs:
         run: |
           mapfile -d '' files < <(find release-artifacts -type f \( -name '*.pkg.tar.zst' -o -name '*.tar.gz' -o -name '*SHA256SUMS' \) -print0)
           gh release create v0.0.2 --target "$GITHUB_SHA" --prerelease --title "Nagi v0.0.2" --notes-file RELEASE_NOTES.md "${files[@]}"
+

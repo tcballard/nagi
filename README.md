@@ -236,3 +236,9 @@ if you chose to change it.
 [Architecture](ARCHITECTURE.md) · [Credits](CREDITS.md) · [MIT licence](LICENSE)
 
 [Approved icon and export rules](docs/icon-design.md)
+
+
+## Agent development
+
+See [CLI personalisation and control](docs/agent-development.md) for the current
+development contract, transactions, upgrade/downgrade handling and validation.
