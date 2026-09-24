@@ -29,6 +29,8 @@ jobs:
           cache-on-failure: true
       - name: Validate approved icon pixels
         run: python3 tests/icons.py
+      - name: Validate compatibility inventory and gate arithmetic
+        run: python3 -m unittest discover -s compat -p 'test_*.py'
       - name: Check formatting
         run: |
           mkdir -p target/evidence
@@ -129,4 +131,3 @@ jobs:
         run: |
           mapfile -d '' files < <(find release-artifacts -type f \( -name '*.pkg.tar.zst' -o -name '*.tar.gz' -o -name '*SHA256SUMS' \) -print0)
           gh release create v0.0.3 --target "$GITHUB_SHA" --prerelease --title "Nagi v0.0.3" --notes-file RELEASE_NOTES.md "${files[@]}"
-
