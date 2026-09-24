@@ -66,6 +66,7 @@ def probe(binary, env, site, directory):
         completed = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=50)
         if completed.returncode or not output.exists():
             raise RuntimeError(completed.stderr.strip() or f'Process exited {completed.returncode}')
+        output.chmod(0o600)
         row = json.loads(output.read_text())
     except (subprocess.TimeoutExpired, RuntimeError, ValueError) as error:
         row = dict(id=site['id'], status='fail', checks={'loads': {'ok': False,
@@ -74,6 +75,7 @@ def probe(binary, env, site, directory):
     if row.get('screenshot'):
         path = Path(row['screenshot'])
         try:
+            path.chmod(0o600)
             fraction = blank_fraction(path)
             row['checks']['renders']['single_colour_fraction'] = round(fraction, 4)
             if fraction > 0.98:
@@ -88,6 +90,9 @@ def probe(binary, env, site, directory):
 
 
 def run(args):
+    # Report JSON can name signed-in sites and PNGs can contain private pages.
+    # Restrict every file created by this process and its Nagi children.
+    os.umask(0o077)
     sites = inventory(args.sites)
     # Never target a user's ordinary Nagi profile: this suite navigates all
     # sites, may play media, and takes screenshots of authenticated pages.
@@ -95,12 +100,14 @@ def run(args):
     day = datetime.date.today().isoformat()
     folder = args.output or ROOT / 'compat/reports' / day
     folder.mkdir(parents=True, exist_ok=True)
+    folder.chmod(0o700)
     server = local_drm_server()
     results = []
     try:
         for attempt in range(args.repeat):
             capture = folder / f'run-{attempt + 1}'
             capture.mkdir(exist_ok=True)
+            capture.chmod(0o700)
             drm = probe(args.binary, env,
                         {'id': '__drm__', 'url': f'http://127.0.0.1:{server.server_port}/',
                          'checks': [{'type': 'drm_probe'}]}, capture)
@@ -122,8 +129,10 @@ def run(args):
     report = dict(date=day, drm_probe=drm_result, sites=last, flaky_sites=flaky,
                   repeat_runs=args.repeat)
     text = render(sites, report)
-    (folder / 'report.json').write_text(json.dumps(report, indent=2) + '\n')
-    (folder / 'report.md').write_text(text)
+    for path, content in [(folder / 'report.json', json.dumps(report, indent=2) + '\n'),
+                          (folder / 'report.md', text)]:
+        path.write_text(content)
+        path.chmod(0o600)
     print(folder / 'report.md')
     if args.repeat > 1 and len(flaky) > len(sites) * .05:
         return 1

@@ -7,6 +7,7 @@ one measured record per configured site; missing results are an error.
 import argparse
 import datetime
 import json
+import os
 from pathlib import Path
 
 STATUSES = {'pass', 'partial', 'fail', 'blocked-auth'}
@@ -93,6 +94,7 @@ def render(sites, result):
 
 
 def main():
+    os.umask(0o077)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--sites', default='compat/sites.yaml')
     parser.add_argument('--results', required=True, type=Path,
@@ -106,8 +108,11 @@ def main():
     text = render(sites, result)
     output = args.output or Path('compat/reports') / result['date']
     output.mkdir(parents=True, exist_ok=True)
-    (output / 'report.json').write_text(json.dumps(result, indent=2) + '\n')
-    (output / 'report.md').write_text(text)
+    output.chmod(0o700)
+    for path, content in [(output / 'report.json', json.dumps(result, indent=2) + '\n'),
+                          (output / 'report.md', text)]:
+        path.write_text(content)
+        path.chmod(0o600)
     print(output / 'report.md')
 
 

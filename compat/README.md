@@ -41,6 +41,7 @@ configured. Never store credentials, cookies or this profile in the repo.
 Run the complete suite against a debug build:
 
 ```sh
+sudo pacman -S --needed python-pillow
 cargo build --locked
 python3 compat/run.py run --profile "$HOME/.local/share/nagi-compat-profile" --repeat 2
 ```
@@ -53,7 +54,8 @@ login. A repeated run reports matching statuses and exits nonzero when fewer
 than 95% agree. The 52-site run may take many minutes.
 
 `run.py` writes `compat/reports/<date>/{report.json,report.md}` and individual
-screenshots in `run-1/` and `run-2/`. `report.py` separately validates measured
+screenshots in `run-1/` and `run-2/`. The runner makes these directories private
+and creates files with a private process umask. `report.py` separately validates measured
 raw JSON and regenerates the two reports:
 
 ```sh

@@ -43,5 +43,8 @@ try:
         assert result['flaky_sites'] == [], result
         assert (directory / 'report/report.md').read_text().startswith('# Nagi compatibility')
         assert result['sites'][0]['screenshot']
+        assert (directory / 'report').stat().st_mode & 0o077 == 0
+        assert (directory / 'report/report.json').stat().st_mode & 0o077 == 0
+        assert (directory / 'report' / result['sites'][0]['screenshot']).stat().st_mode & 0o077 == 0
 finally:
     server.shutdown()
