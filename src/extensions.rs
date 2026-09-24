@@ -181,10 +181,24 @@ pub fn load(id: &str) -> Result<Installed, String> {
 pub fn fingerprint() -> Vec<(PathBuf, Option<std::time::SystemTime>, u64)> {
     let mut paths = vec![root().join("grants.json")];
     if let Ok(entries) = fs::read_dir(root()) {
-        let mut dirs: Vec<_> = entries.flatten().filter(|e| e.file_type().is_ok_and(|t| t.is_dir())).map(|e| e.path().join("manifest.json")).collect();
-        dirs.sort(); dirs.truncate(64); paths.extend(dirs);
+        let mut dirs: Vec<_> = entries
+            .flatten()
+            .filter(|e| e.file_type().is_ok_and(|t| t.is_dir()))
+            .map(|e| e.path().join("manifest.json"))
+            .collect();
+        dirs.sort();
+        dirs.truncate(64);
+        paths.extend(dirs);
     }
-    paths.into_iter().map(|path| { let meta = fs::metadata(&path).ok(); let time = meta.as_ref().and_then(|m| m.modified().ok()); let size = meta.map(|m| m.len()).unwrap_or(0); (path,time,size) }).collect()
+    paths
+        .into_iter()
+        .map(|path| {
+            let meta = fs::metadata(&path).ok();
+            let time = meta.as_ref().and_then(|m| m.modified().ok());
+            let size = meta.map(|m| m.len()).unwrap_or(0);
+            (path, time, size)
+        })
+        .collect()
 }
 pub fn list() -> Vec<Result<Installed, String>> {
     let Ok(entries) = fs::read_dir(root()) else {

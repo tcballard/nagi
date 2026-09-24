@@ -59,6 +59,11 @@ with tempfile.TemporaryDirectory(prefix='nagi-control-') as directory:
     try:
         wait(lambda: pathlib.Path(directory+'/runtime/nagi-control/browser.sock').exists())
         assert call('tabs') == []
+        subprocess.run([binary,'--private',url],env=env,check=True)
+        time.sleep(.5)
+        call('attach',ok=False)
+        xd('key','ctrl+w')
+        time.sleep(.5)
         call('open', {'url':url}, ok=False)
         call('snapshot', {'tab':1}, ok=False)
         grant = subprocess.Popen([binary,'browser','attach','{}'], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -90,6 +95,22 @@ with tempfile.TemporaryDirectory(prefix='nagi-control-') as directory:
         call('revoke', {'origin':url})
         call('snapshot', {'tab':tab}, ok=False)
         assert call('tabs')[0]['access']=='unavailable'
+        # Cancellation closes the native permission prompt and cannot grant access.
+        pending = subprocess.Popen([binary,'browser','grant',json.dumps({'origin':'http://127.0.0.1:9'}),'pending-grant'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        time.sleep(.5)
+        assert call('cancel',{'id':'pending-grant'})['cancelled']
+        pending.communicate(timeout=5)
+        assert pending.returncode != 0
+        call('open',{'url':'http://127.0.0.1:9/'},ok=False)
+        # A read-only origin grant permits observations but never interaction.
+        read_only = subprocess.Popen([binary,'browser','grant',json.dumps({'origin':url})],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        time.sleep(.5)
+        xd('key','Tab'); xd('key','Return')
+        stdout,stderr=read_only.communicate(timeout=20)
+        assert read_only.returncode==0,stderr
+        assert json.loads(stdout)['result']['interaction'] is False
+        observed=call('snapshot',{'tab':tab})
+        call('click',{'tab':tab,'ref':observed['elements'][0]['ref']},ok=False)
         call('stop')
         wait(lambda:not pathlib.Path(directory+'/runtime/nagi-control/browser.sock').exists())
         call('capabilities', ok=False)

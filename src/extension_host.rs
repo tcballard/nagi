@@ -17,7 +17,9 @@ impl Browser {
             return;
         }
         let fingerprint = extensions::fingerprint();
-        if fingerprint == *self.extension_fingerprint.borrow() { return; }
+        if fingerprint == *self.extension_fingerprint.borrow() {
+            return;
+        }
         *self.extension_fingerprint.borrow_mut() = fingerprint;
         let enabled: Vec<_> = extensions::list()
             .into_iter()
@@ -269,7 +271,7 @@ impl Browser {
             if let Some(nav) = decision.downcast_ref::<webkit::NavigationPolicyDecision>() {
                 let uri = nav
                     .navigation_action()
-                    .and_then(|a| a.request())
+                    .and_then(|mut a| a.request())
                     .and_then(|r| r.uri());
                 if uri.as_deref() != Some("about:blank") {
                     decision.ignore();

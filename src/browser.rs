@@ -33,7 +33,8 @@ pub struct Browser {
     pub safe_mode: bool,
     pub control: RefCell<crate::control::Control>,
     pub extensions: RefCell<Vec<crate::extensions::Installed>>,
-    pub extension_fingerprint: RefCell<Vec<(std::path::PathBuf, Option<std::time::SystemTime>, u64)>>,
+    pub extension_fingerprint:
+        RefCell<Vec<(std::path::PathBuf, Option<std::time::SystemTime>, u64)>>,
     pub extension_views: RefCell<Vec<(String, glib::WeakRef<webkit::WebView>)>>,
     pub control_bar: gtk::Box,
     personal_css: gtk::CssProvider,
