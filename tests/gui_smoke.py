@@ -2,7 +2,8 @@
 """Real GTK/X11 smoke checks. Run under dbus-run-session + xvfb-run.
 All web content is served by a local fixture. This is not Hyprland acceptance.
 """
-import http.server, json, os, pathlib, subprocess, sys, tempfile, threading, time
+import http.server, io, json, os, pathlib, subprocess, sys, tempfile, threading, time
+from PIL import Image
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 BINARY=pathlib.Path(sys.argv[1] if len(sys.argv)>1 else ROOT/'target/debug/nagi').resolve()
 OUT=ROOT/'target/evidence'; OUT.mkdir(parents=True,exist_ok=True)
@@ -13,17 +14,19 @@ for name,folder in [('XDG_CONFIG_HOME','config'),('XDG_DATA_HOME','data'),('XDG_
 env['GDK_BACKEND']='x11'
 subprocess.run([str(ROOT/'scripts/install-icons.sh'),str(pathlib.Path(env['XDG_DATA_HOME'])/'icons/hicolor')],check=True,env=env)
 subprocess.run(['/usr/bin/python3',str(ROOT/'tests/icon_lookup.py')],check=True,env=env)
+favicon=io.BytesIO();Image.new("RGB",(16,16),(48,188,128)).save(favicon,format="PNG")
 requests=[]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         requests.append(self.path)
-        if self.path=='/favicon.svg':
-            body=b'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" rx="3" fill="#30bc80"/></svg>';self.send_response(200);self.send_header('Content-Type','image/svg+xml')
+        if self.path=='/favicon.png':
+            body=favicon.getvalue();self.send_response(200);self.send_header('Content-Type','image/png')
         elif self.path=='/download':
             body=b'Nagi download fixture.\n';self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Disposition','attachment; filename="nagi-test.txt"')
         else:
             body=(ROOT/'tests/fixture.html').read_bytes() if self.path!='/second' else b'<title>Second page</title><h1>Second page</h1>'
-            body+=b'<link rel="icon" href="/favicon.svg"><script>document.addEventListener("keydown",e=>{if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
+            body=b'<link rel="icon" type="image/png" href="/favicon.png">'+body
+            body+=b'<script>document.addEventListener("keydown",e=>{if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
@@ -55,7 +58,7 @@ try:
         count=requests.count('/focus-check');key('F8')
         wait_for(lambda:requests.count('/focus-check')>count)
     assert_page_focus()
-    wait_for(lambda:'/favicon.svg' in requests)
+    wait_for(lambda:'/favicon.png' in requests)
     key('ctrl+alt+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-address.png')],check=True,env=env)
     xd('type','--clearmodifiers','--delay','40','quiet places to read');time.sleep(.4)

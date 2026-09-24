@@ -45,15 +45,12 @@ impl Browser {
             } else {
                 self.session.clone()
             };
+            if let Some(manager) = session.website_data_manager() {
+                manager.set_favicons_enabled(true);
+            }
             builder = builder.network_session(&session);
         }
         let view = builder.build();
-        if let Some(manager) = view
-            .network_session()
-            .and_then(|s| s.website_data_manager())
-        {
-            manager.set_favicons_enabled(true);
-        }
         let wt = Rc::downgrade(tab);
         view.connect_favicon_notify(move |v| {
             if let Some(t) = wt.upgrade() {
