@@ -43,6 +43,7 @@ fn run(args: &[String]) -> Result<i32, String> {
     // arbitrary script from the site inventory.
     std::env::set_var("NAGI_COMPAT_PROBE", "1");
     let app = gtk::Application::new(Some(core::APP_ID), gio::ApplicationFlags::NON_UNIQUE);
+    let output_result_path = output.clone();
     app.connect_activate(move |app| {
         let started = Instant::now();
         let browser = Browser::new(app, true);
@@ -54,13 +55,26 @@ fn run(args: &[String]) -> Result<i32, String> {
             return;
         };
         let done = Rc::new(Cell::new(false));
+        let loaded = Rc::new(Cell::new(false));
         let app_timeout = app.clone();
         let output_timeout = output.clone();
         let done_timeout = done.clone();
         let id_timeout = id.clone();
+        let loaded_timeout = loaded.clone();
         glib::timeout_add_local(Duration::from_secs(20), move || {
+            if !loaded_timeout.get() {
+                finish(&app_timeout, &output_timeout, &done_timeout,
+                    json!({"id":id_timeout,"status":"fail","checks":{"loads":{"ok":false,"reason":"20 second timeout"}},"elapsed_ms":20000,"console_error_count":0,"screenshot":null}));
+            }
+            glib::ControlFlow::Break
+        });
+        let app_timeout = app.clone();
+        let output_timeout = output.clone();
+        let done_timeout = done.clone();
+        let id_timeout = id.clone();
+        glib::timeout_add_local(Duration::from_secs(43), move || {
             finish(&app_timeout, &output_timeout, &done_timeout,
-                json!({"id":id_timeout,"status":"fail","checks":{"loads":{"ok":false,"reason":"20 second timeout"}},"elapsed_ms":20000,"console_error_count":0,"screenshot":null}));
+                json!({"id":id_timeout,"status":"fail","checks":{"loads":{"ok":true},"probe":{"ok":false,"reason":"43 second overall timeout"}},"elapsed_ms":43000,"console_error_count":0,"screenshot":null}));
             glib::ControlFlow::Break
         });
         let app_loaded = app.clone();
@@ -69,10 +83,12 @@ fn run(args: &[String]) -> Result<i32, String> {
         let id_loaded = id.clone();
         let checks_loaded = checks.clone();
         let tab_loaded = tab.clone();
+        let loaded_event = loaded.clone();
         view.connect_load_changed(move |view, event| {
             if event != webkit::LoadEvent::Finished || done_loaded.get() {
                 return;
             }
+            loaded_event.set(true);
             let elapsed = started.elapsed().as_millis();
             if tab_loaded.failed.get() || view.uri().as_deref().is_some_and(|u| u.starts_with("webkit")) {
                 finish(&app_loaded, &output_loaded, &done_loaded,
@@ -121,7 +137,15 @@ fn run(args: &[String]) -> Result<i32, String> {
                 let view_shot = view_dom.clone();
                 // Allow first paint and a media progression interval. A failed
                 // snapshot remains an honest failure, never a fabricated pass.
-                glib::timeout_add_local(Duration::from_secs(3), move || {
+                let delay = if checks_dom
+                    .as_array()
+                    .is_some_and(|c| c.iter().any(|c| c["type"] == "media_playback"))
+                {
+                    15
+                } else {
+                    3
+                };
+                glib::timeout_add_local(Duration::from_secs(delay), move || {
                     if done_shot.get() { return glib::ControlFlow::Break; }
                     let screenshot = output_shot.with_extension("png");
                     let app_end = app_shot.clone();
@@ -171,7 +195,7 @@ fn run(args: &[String]) -> Result<i32, String> {
         });
     });
     let _ = app.run();
-    Ok(if output.exists() { 0 } else { 2 })
+    Ok(if output_result_path.exists() { 0 } else { 2 })
 }
 
 pub fn cli(args: &[String]) -> i32 {

@@ -63,13 +63,13 @@ def probe(binary, env, site, directory):
     check_json = json.dumps(site['checks'])
     cmd = [str(binary), 'compat-probe', site['id'], site['url'], check_json, str(output)]
     try:
-        completed = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=27)
+        completed = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=50)
         if completed.returncode or not output.exists():
             raise RuntimeError(completed.stderr.strip() or f'Process exited {completed.returncode}')
         row = json.loads(output.read_text())
     except (subprocess.TimeoutExpired, RuntimeError, ValueError) as error:
         row = dict(id=site['id'], status='fail', checks={'loads': {'ok': False,
-                   'reason': str(error)[:300]}}, elapsed_ms=27000,
+                   'reason': str(error)[:300]}}, elapsed_ms=50000,
                    console_error_count=0, screenshot=None)
     if row.get('screenshot'):
         path = Path(row['screenshot'])
