@@ -1,19 +1,32 @@
 //! CLI and GTK use the same validated transaction path.
-use crate::{core::{state_dir, Settings}, config_store::{self, Document}};
+use crate::{
+    config_store::{self, Document},
+    core::{state_dir, Settings},
+};
 use std::path::PathBuf;
 
-pub fn path() -> PathBuf { state_dir().join("settings.json") }
+pub fn path() -> PathBuf {
+    state_dir().join("settings.json")
+}
 pub fn read() -> Result<Option<Settings>, String> {
     Ok(config_store::read(&path())?.map(|d| d.settings))
 }
 pub fn document() -> Result<Document, String> {
-    if let Some(d) = config_store::read(&path())? { return Ok(d); }
-    Ok(Document::initial(crate::storage::read(&state_dir().join("state.json"))?.settings))
+    if let Some(d) = config_store::read(&path())? {
+        return Ok(d);
+    }
+    Ok(Document::initial(
+        crate::storage::read(&state_dir().join("state.json"))?.settings,
+    ))
 }
 pub fn change(key: &str, value: &str) -> Result<Settings, String> {
     let initial = document()?;
-    Ok(config_store::transact(&path(), &initial.settings, None, false,
-        |d| set(&mut d.settings, key, value))?.settings)
+    Ok(
+        config_store::transact(&path(), &initial.settings, None, false, |d| {
+            set(&mut d.settings, key, value)
+        })?
+        .settings,
+    )
 }
 pub fn schema() -> serde_json::Value {
     serde_json::json!({"api":1,"schema":1,"settings":{
@@ -190,22 +203,40 @@ fn parse_bool(s: &str) -> Result<bool, String> {
 
 pub fn cli(args: &[String]) -> i32 {
     match run(args) {
-        Ok(value) => { println!("{}", serde_json::to_string_pretty(&value).unwrap()); 0 }
-        Err(e) => { eprintln!("{}", serde_json::json!({"error":e})); 2 }
+        Ok(value) => {
+            println!("{}", serde_json::to_string_pretty(&value).unwrap());
+            0
+        }
+        Err(e) => {
+            eprintln!("{}", serde_json::json!({"error":e}));
+            2
+        }
     }
 }
 fn run(args: &[String]) -> Result<serde_json::Value, String> {
-    if args == ["schema"] { return Ok(schema()); }
+    if args == ["schema"] {
+        return Ok(schema());
+    }
     let initial = document()?;
-    if args == ["inspect"] { return serde_json::to_value(initial).map_err(|e| e.to_string()); }
-    if args == ["get"] { return serde_json::to_value(initial.settings).map_err(|e| e.to_string()); }
+    if args == ["inspect"] {
+        return serde_json::to_value(initial).map_err(|e| e.to_string());
+    }
+    if args == ["get"] {
+        return serde_json::to_value(initial.settings).map_err(|e| e.to_string());
+    }
     if args.first().is_some_and(|a| a == "get") && args.len() == 2 {
         let json = serde_json::to_value(&initial.settings).unwrap();
         let key = match args[1].as_str() {
-            "tabs.layout" => "tab_layout", "features.link_previews" => "link_previews",
-            "search.engine" => "search", "appearance" => "dark", "restore_tabs" => "restore",
-            "block_trackers" => "block", "zoom" => "zoom",
-            k if k.starts_with("shortcuts.") && OVERRIDES.contains(&&k[10..]) => return Ok(json["shortcuts"][&k[10..]].clone()),
+            "tabs.layout" => "tab_layout",
+            "features.link_previews" => "link_previews",
+            "search.engine" => "search",
+            "appearance" => "dark",
+            "restore_tabs" => "restore",
+            "block_trackers" => "block",
+            "zoom" => "zoom",
+            k if k.starts_with("shortcuts.") && OVERRIDES.contains(&&k[10..]) => {
+                return Ok(json["shortcuts"][&k[10..]].clone())
+            }
             _ => return Err("Unknown setting".into()),
         };
         return Ok(json[key].clone());
@@ -217,7 +248,14 @@ fn run(args: &[String]) -> Result<serde_json::Value, String> {
     while let Some(arg) = iter.next() {
         match arg.as_str() {
             "--dry-run" => dry_run = true,
-            "--if-revision" => expected = Some(iter.next().ok_or("Missing revision")?.parse::<u64>().map_err(|_| "Invalid revision")?),
+            "--if-revision" => {
+                expected = Some(
+                    iter.next()
+                        .ok_or("Missing revision")?
+                        .parse::<u64>()
+                        .map_err(|_| "Invalid revision")?,
+                )
+            }
             _ => positional.push(arg.as_str()),
         }
     }
@@ -259,4 +297,3 @@ mod tests {
         assert_eq!(s.tab_layout, "Left");
     }
 }
-

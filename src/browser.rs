@@ -1330,4 +1330,3 @@ impl Browser {
         button.set_menu_model(Some(&menu));
     }
 }
-
