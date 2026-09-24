@@ -194,7 +194,9 @@ fn run(args: &[String]) -> Result<i32, String> {
             });
         });
     });
-    let _ = app.run();
+    // Application::run() would reinterpret the probe arguments as files to
+    // open. This dedicated instance receives no GTK command-line arguments.
+    let _ = app.run_with_args(&["nagi-compat"]);
     Ok(if output_result_path.exists() { 0 } else { 2 })
 }
 
