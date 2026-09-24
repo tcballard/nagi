@@ -373,6 +373,16 @@ impl Browser {
             m.add_filter(filter);
         }
         m.remove_all_scripts();
+        // Retain the named world across evaluate_javascript calls. Without a
+        // registered user script WebKit can discard an otherwise unowned world.
+        m.add_script(&webkit::UserScript::for_world(
+            "window.__nagiControl = null;",
+            webkit::UserContentInjectedFrames::TopFrame,
+            webkit::UserScriptInjectionTime::Start,
+            "nagi-control",
+            &[],
+            &[],
+        ));
         let hidden = serde_json::to_string(&self.state.borrow().hidden).unwrap_or_default();
         let js = format!(
             r#"(()=>{{const rules={hidden};const selectors=rules[location.origin]||[];if(!selectors.length)return;const apply=()=>{{if(!document.documentElement)return false;const style=document.createElement('style');style.textContent=selectors.map(s=>s+'{{display:none!important}}').join('\n');document.documentElement.append(style);return true;}};if(!apply()){{const observer=new MutationObserver(()=>{{if(apply())observer.disconnect();}});observer.observe(document,{{childList:true,subtree:true}});}}}})();"#
