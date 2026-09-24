@@ -75,6 +75,12 @@ impl Browser {
                 t.failed.set(false);
                 t.picking.set(false);
             }
+            // A cached same-site favicon may not emit another property change.
+            if event == webkit::LoadEvent::Finished {
+                if let Some(texture) = v.favicon() {
+                    t.favicon.set_paintable(Some(&texture));
+                }
+            }
             if !t.reader.get() {
                 if let Some(uri) = v.uri() {
                     if uri != "about:blank" {

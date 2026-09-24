@@ -112,6 +112,13 @@ try:
     wait_for(lambda:destination.exists() and destination.read_bytes()==b'Nagi download fixture.\n')
     xd('windowfocus',window);key('Escape')
     navigate(url);wait_for(lambda:any(v['url']==url for v in state()['history']))
+    # Both loaded website tabs retain their cached icon after same-site navigation.
+    time.sleep(1)
+    subprocess.run(['import','-window',window,str(OUT/'nagi-favicons.png')],check=True,env=env)
+    capture=Image.open(OUT/'nagi-favicons.png').convert('RGB')
+    green_columns=[x for x in range(capture.width) if any(capture.getpixel((x,y))==(48,188,128) for y in range(45))]
+    groups=sum(i==0 or x>green_columns[i-1]+1 for i,x in enumerate(green_columns))
+    assert groups>=2, 'Both loaded tabs must display their website favicon'
     key('ctrl+b');subprocess.run(['import','-window',window,str(OUT/'nagi-browser.png')],check=True,env=env);key('Escape')
     key('ctrl+t');key('Escape');subprocess.run(['import','-window',window,str(OUT/'nagi-welcome.png')],check=True,env=env)
     xd('windowsize',window,'1040','720');time.sleep(1)
@@ -129,7 +136,7 @@ try:
     key('Escape');navigate(url+'reduced-motion');wait_for(lambda:'/reduced-motion' in requests)
     key('ctrl+alt+l');key('Escape');assert_page_focus()
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
-    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local tab and history suggestions via keyboard','favicon requested from local fixture','window dimensions restored after restart','composer with GTK animations disabled','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
+    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local tab and history suggestions via keyboard','favicon loaded and retained across same-site navigation (pixel check)','window dimensions restored after restart','composer with GTK animations disabled','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
     (OUT/'gui-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 finally:
     subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)
