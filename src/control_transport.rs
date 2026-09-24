@@ -163,6 +163,9 @@ fn serve(
                     } else {
                         let deadline = Instant::now() + Duration::from_secs(17);
                         loop {
+                            if let Ok(value) = response.try_recv() {
+                                break value;
+                            }
                             if stop.load(Ordering::Relaxed) {
                                 break failure(&id, "Agent control stopped");
                             }
