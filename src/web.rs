@@ -71,12 +71,15 @@ impl Browser {
                 return;
             };
             if event == webkit::LoadEvent::Started {
+                t.generation.set(t.generation.get().wrapping_add(1));
+                b.control_event("navigation.started", t.id);
                 t.favicon.set_icon_name(Some("text-html-symbolic"));
                 t.failed.set(false);
                 t.picking.set(false);
             }
             // A cached same-site favicon may not emit another property change.
             if event == webkit::LoadEvent::Finished {
+                b.control_event("navigation.finished", t.id);
                 if let Some(texture) = v.favicon() {
                     t.favicon.set_paintable(Some(&texture));
                 }
@@ -156,7 +159,9 @@ impl Browser {
             false
         });
         let weak = Rc::downgrade(self);
+        let wt = Rc::downgrade(tab);
         view.connect_web_process_terminated(move |_, _| {
+            if let Some(t) = wt.upgrade() { t.failed.set(true); t.generation.set(t.generation.get().wrapping_add(1)); }
             if let Some(b) = weak.upgrade() {
                 b.notice("This page stopped responding. Reload it to continue.");
             }
@@ -586,3 +591,4 @@ impl Browser {
         });
     }
 }
+

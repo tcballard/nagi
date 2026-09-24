@@ -7,6 +7,7 @@ description = "A quiet native browser for Omarchy"
 license = "MIT"
 
 [dependencies]
+cairo-rs = { version = "0.21", features = ["png"] }
 gtk = { package = "gtk4", version = "0.10", features = ["v4_10"] }
 webkit = { package = "webkit6", version = "0.5", features = ["v2_42"] }
 serde = { version = "1", features = ["derive"] }
