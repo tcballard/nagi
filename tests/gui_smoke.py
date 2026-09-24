@@ -38,7 +38,7 @@ class Fixture(http.server.BaseHTTPRequestHandler):
         else:
             body=(ROOT/'tests/fixture.html').read_bytes() if self.path!='/second' else b'<title>Second page</title><h1>Second page</h1>'
             body=b'<link rel="icon" type="image/png" href="/favicon.png">'+body
-            body+=b'<script>document.addEventListener("keydown",e=>{if(e.key==="Tab"&&e.target.id==="nagi-first")fetch("/tab-check");if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
+            body+=b'<script>document.addEventListener("focusin",e=>{if(e.target.id==="nagi-second")fetch("/second-focus")});document.addEventListener("keydown",e=>{if(e.key==="Tab"&&e.target.id==="nagi-first")fetch("/tab-check");if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
@@ -71,8 +71,9 @@ try:
         wait_for(lambda:requests.count('/focus-check')>count)
     assert_page_focus()
     # A Tab keystroke inside page input belongs to the web form.
-    xd('mousemove','--window',window,'280','680');xd('click','1');key('Tab')
-    wait_for(lambda:'/tab-check' in requests)
+    xd('mousemove','--window',window,'280','680');xd('click','1')
+    key('Tab');key('Tab')
+    wait_for(lambda:'/tab-check' in requests and '/second-focus' in requests)
     assert len(xd('search','--onlyvisible','--name','Nagi').splitlines())==1
     assert_page_focus()
     wait_for(lambda:'/favicon.png' in requests)
