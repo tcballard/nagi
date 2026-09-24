@@ -84,7 +84,11 @@ fn run(args: &[String]) -> Result<i32, String> {
         let checks_loaded = checks.clone();
         let tab_loaded = tab.clone();
         let loaded_event = loaded.clone();
+        // Browser owns the content-filter compile callback that releases
+        // pending navigations. Keep it alive until this one-shot run exits.
+        let browser_keepalive = browser.clone();
         view.connect_load_changed(move |view, event| {
+            let _keepalive = &browser_keepalive;
             if event != webkit::LoadEvent::Finished || done_loaded.get() {
                 return;
             }
