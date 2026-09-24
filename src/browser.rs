@@ -130,7 +130,7 @@ impl Browser {
         strip_line.append(&tabs_button);
         let address_button = icon(
             "system-search-symbolic",
-            "Address / search · Super+Alt+L or Ctrl+L",
+            "Address / search · Ctrl+Alt+L or Ctrl+L",
         );
         strip_line.append(&address_button);
         let menu = gtk::MenuButton::builder()
@@ -622,7 +622,7 @@ impl Browser {
         let Some(tab) = self.tab() else { return };
         let page = tab.page.borrow();
         self.address_button.set_tooltip_text(Some(&format!(
-            "{}\nAddress / search · Super+Alt+L or Ctrl+L",
+            "{}\nAddress / search · Ctrl+Alt+L or Ctrl+L",
             page.url
         )));
         if !self.address_layer.get_visible() {
@@ -715,7 +715,7 @@ impl Browser {
             links.append(&btn);
         }
         area.append(&links);
-        let hint = label("Super+Alt+L / Ctrl+L  address     Ctrl+T  new tab", "muted");
+        let hint = label("Ctrl+Alt+L / Ctrl+L  address     Ctrl+T  new tab", "muted");
         hint.set_margin_top(24);
         area.append(&hint);
         tab.holder.append(&area);
@@ -785,7 +785,7 @@ impl Browser {
             ("close", vec!["<Control>w"]),
             ("reopen", vec!["<Control><Shift>t"]),
             ("address", vec!["<Control>l"]),
-            ("search", vec!["<Super><Alt>l"]),
+            ("search", vec!["<Control><Alt>l"]),
             ("site", vec![]),
             ("stop", vec![]),
             ("tabs", vec!["<Control>k"]),

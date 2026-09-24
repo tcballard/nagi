@@ -104,7 +104,7 @@ plus the Rust toolchain. Additional GStreamer codecs may be needed for video.
 
 | Action | Shortcut |
 |---|---|
-| New search / edit current address | Super+Alt+L / Ctrl+L |
+| New search / edit current address | Ctrl+Alt+L / Ctrl+L |
 | Dismiss floating bar | Escape or click outside |
 | New / close tab | Ctrl+T / Ctrl+W |
 | Reopen closed tab | Ctrl+Shift+T |
@@ -127,7 +127,7 @@ Omarchy's Super+W closes the window. Ctrl+W closes the current tab.
 ### Floating address bar (development branch)
 
 The address bar opens in the centre of the browser over the current page. Press
-**Super+Alt+L**, or click the search icon beside the tabs, for an empty composer.
+**Ctrl+Alt+L**, or click the search icon beside the tabs, for an empty composer.
 **Ctrl+L** selects the current URL for editing. Type an address or search and
 press Enter or use the send arrow. Escape or a click outside returns focus to
 the page. New tabs open the composer automatically. Back/forward, reload/stop,
@@ -142,16 +142,14 @@ cargo build --release --locked
 ./target/release/nagi --focus-address
 ```
 
-Super shortcuts are subject to your compositor bindings. The Omarchy `dev`
-bindings inspected at `b9ddccfc377abe0b8fc3ff1ee5b31a86bf202d4a` leave
-Super+Alt+L unused; Super+L changes layout and Super+Ctrl+L locks the system.
-Local custom bindings may differ. Ctrl+L always remains an app shortcut.
+Ctrl+Alt+L is handled inside Nagi while its window is focused. A custom
+compositor binding can intercept it; Ctrl+L remains available to edit the address.
 
 For an optional desktop-wide shortcut that also presents Nagi, the current
 Omarchy Lua configuration accepts this in `~/.config/hypr/bindings.lua`:
 
 ```lua
-o.bind("SUPER + ALT + L", "Nagi address / search", "nagi --focus-address")
+o.bind("CTRL + ALT + L", "Nagi address / search", "nagi --focus-address")
 ```
 
 Use an absolute executable path if `nagi` is not on your session PATH. This

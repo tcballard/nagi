@@ -14,7 +14,7 @@ fn main() -> gtk::glib::ExitCode {
         return gtk::glib::ExitCode::SUCCESS;
     }
     if args.iter().any(|a| a == "--help") {
-        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [URL ...]\n       nagi --version\n\nSuper+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
+        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [URL ...]\n       nagi --version\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
         return gtk::glib::ExitCode::SUCCESS;
     }
     let app = gtk::Application::new(

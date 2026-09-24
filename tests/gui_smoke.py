@@ -53,7 +53,7 @@ try:
         count=requests.count('/focus-check');key('F8')
         wait_for(lambda:requests.count('/focus-check')>count)
     assert_page_focus()
-    key('super+alt+l')
+    key('ctrl+alt+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-address.png')],check=True,env=env)
     xd('type','--clearmodifiers','--delay','40','quiet places to read');time.sleep(.4)
     subprocess.run(['import','-window',window,str(OUT/'nagi-composer.png')],check=True,env=env)
@@ -102,7 +102,7 @@ try:
     window=wait_for(lambda:xd('search','--onlyvisible','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
     time.sleep(1);assert state()['tabs']==saved['tabs']
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
-    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['floating bar via Super+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
+    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
     (OUT/'gui-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 finally:
     subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)
