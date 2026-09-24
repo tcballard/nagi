@@ -280,4 +280,3 @@ mod tests {
         assert_eq!(html("<script>\"&"), "&lt;script&gt;&quot;&amp;");
     }
 }
-

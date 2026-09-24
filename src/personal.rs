@@ -12,7 +12,11 @@ pub struct Profile {
 }
 pub fn http_url(value: &str) -> Result<(), String> {
     let url = url::Url::parse(value).map_err(|_| "Expected an absolute HTTP(S) URL")?;
-    if !["http", "https"].contains(&url.scheme()) || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() {
+    if !["http", "https"].contains(&url.scheme())
+        || url.host_str().is_none()
+        || !url.username().is_empty()
+        || url.password().is_some()
+    {
         return Err("Expected HTTP(S) URL without embedded credentials".into());
     }
     Ok(())
@@ -47,8 +51,14 @@ pub fn cli(args: &[String]) -> i32 {
         }
     })();
     match result {
-        Ok(value) => { println!("{}", serde_json::to_string_pretty(&value).unwrap()); 0 }
-        Err(e) => { eprintln!("{}", serde_json::json!({"error":e})); 2 }
+        Ok(value) => {
+            println!("{}", serde_json::to_string_pretty(&value).unwrap());
+            0
+        }
+        Err(e) => {
+            eprintln!("{}", serde_json::json!({"error":e}));
+            2
+        }
     }
 }
 #[cfg(test)]
@@ -56,7 +66,14 @@ mod tests {
     use super::*;
     #[test]
     fn profile_validation_and_safe_url_boundary() {
-        for value in ["file:///etc/passwd", "javascript:alert(1)", "https://user:password@example.com", "relative"] { assert!(http_url(value).is_err()); }
+        for value in [
+            "file:///etc/passwd",
+            "javascript:alert(1)",
+            "https://user:password@example.com",
+            "relative",
+        ] {
+            assert!(http_url(value).is_err());
+        }
         assert!(http_url("https://example.com/start").is_ok());
         let mut settings = Settings::default();
         assert!(config::set(&mut settings, "appearance.accent", "red; }").is_err());
