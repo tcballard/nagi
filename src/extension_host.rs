@@ -368,12 +368,18 @@ impl Browser {
                 let script = format!("(() => {{ if(location.origin !== {}) return; const s=document.createElement('style'); s.textContent={}; document.documentElement.append(s); {} }})();", serde_json::to_string(&site.origin).unwrap(), serde_json::to_string(&site.css).unwrap(), site.script);
                 let weak = Rc::downgrade(self);
                 let id = extension.manifest.id.clone();
+                let tab = Rc::downgrade(tab);
+                let generation = tab.upgrade().map(|t| t.generation.get());
+                let callback_tab = tab.clone();
                 view.evaluate_javascript(
                     &script,
                     Some(&format!("nagi-extension-{}", extension.manifest.id)),
                     None,
                     gio::Cancellable::NONE,
                     move |result| {
+                        if callback_tab.upgrade().map(|t| t.generation.get()) != generation {
+                            return;
+                        }
                         if let Some(b) = weak.upgrade() {
                             if result.is_err() {
                                 let _ = extensions::grant(&id, None);
@@ -388,7 +394,7 @@ impl Browser {
                 self.watch_extension(
                     &view,
                     &extension.manifest.id,
-                    Some((Rc::downgrade(tab), tab.generation.get())),
+                    Some((tab, generation.unwrap_or(0))),
                 );
             }
         }

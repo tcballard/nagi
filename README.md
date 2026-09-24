@@ -242,3 +242,11 @@ if you chose to change it.
 
 See [CLI personalisation and control](docs/agent-development.md) for the current
 development contract, transactions, upgrade/downgrade handling and validation.
+
+The CLI-first development series is stacked for review: [transactional settings
+#4](https://github.com/tcballard/nagi/pull/4), [personal profiles
+#5](https://github.com/tcballard/nagi/pull/5), [scoped browser control
+#6](https://github.com/tcballard/nagi/pull/6) and [personal extensions
+#7](https://github.com/tcballard/nagi/pull/7), following settings/layout PR #3.
+These features are not in the v0.0.2 release above. Personal Nagi extensions are
+distinct from Chrome/Firefox extension compatibility, which remains unsupported.
