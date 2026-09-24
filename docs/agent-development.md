@@ -65,3 +65,50 @@ It starts with defaults, does not restore/save sessions or edit settings, and
 will not load extensions or start agent control. Normal startup restores your
 saved preferences. Safe mode is selected at startup; sending it to an already
 running browser does not change that process's mode.
+
+## 3. Local browser control
+
+Start a new process with `nagi --agent-control`. Existing instances must be
+closed first. The CLI is `nagi browser METHOD '[JSON_PARAMS]' [REQUEST_ID]`.
+`capabilities` discovers the supported methods. No HTTP server or MCP adapter.
+The Unix socket is mode 0600 in a mode-0700 runtime directory; this is a local
+same-user interface, not isolation from hostile processes running as you.
+
+Run `nagi browser attach` to share the active normal tab, or
+`nagi browser grant '{"origin":"https://example.com"}'` before opening a tab.
+Approve read access or read-and-interaction in the native browser dialog.
+These grants allow authenticated page content/actions on that exact origin;
+only approve interaction when your agent is authorised to act there. Grants
+are session-only, never provided by webpage text. Private tabs are excluded.
+
+Examples (replace TAB with the numeric ID returned by attach/open):
+
+- `nagi browser tabs`
+- `nagi browser open '{"url":"https://example.com"}'`
+- `nagi browser wait '{"tab":TAB}'`
+- `nagi browser snapshot '{"tab":TAB}'`
+- `nagi browser click '{"tab":TAB,"ref":"REF_FROM_SNAPSHOT"}'`
+- `nagi browser type '{"tab":TAB,"ref":"REF","text":"hello"}'`
+- `nagi browser select '{"tab":TAB,"ref":"REF","value":"option-value"}'`
+- `nagi browser scroll '{"tab":TAB,"y":600}'`
+- `nagi browser screenshot '{"tab":TAB}'` returns PNG as base64, no filesystem writes.
+- `nagi browser events '{"after":0}'` returns bounded events, cursor and gap flag.
+- `nagi browser revoke '{"origin":"https://example.com"}'`
+- `nagi browser cancel '{"id":"REQUEST_ID"}'`
+- `nagi browser stop`
+
+Responses include a session identifier. Pass `session` in params to reject a
+stale browser session. IDs are unique within a session, and repeated request
+IDs are rejected; do not blindly retry timed-out mutations. Completion of an
+input operation does not prove completion of a website transaction. Observe
+again to verify. `wait` waits for the current load, not future SPA network work.
+Snapshots invalidate old element references. Navigation invalidates observations.
+Page content is explicitly untrusted. No arbitrary JavaScript evaluation API.
+Password/payment/OTP/file inputs require manual entry. Cross-origin frames and
+closed shadow roots are not exposed; synthetic input may not work on all sites.
+
+Requests are bounded to 64 KiB, 16 connections, 15 seconds and 10,000 IDs per
+session. Events retain the last 512 entries and no page contents. Cancellation
+stops pending work; it cannot undo already completed website actions. The
+visible Stop button revokes all access and closes the socket. Restart Nagi to
+enable another control session. Downloads continue to use native save prompts.

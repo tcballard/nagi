@@ -1,6 +1,8 @@
 mod browser;
 mod config;
 mod config_store;
+mod control;
+mod control_transport;
 mod core;
 mod icons;
 mod import;
@@ -16,6 +18,9 @@ fn main() -> gtk::glib::ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1).is_some_and(|a| a == "config") {
         return gtk::glib::ExitCode::from(config::cli(&args[2..]) as u8);
+    }
+    if args.get(1).is_some_and(|a| a == "browser") {
+        return gtk::glib::ExitCode::from(control_transport::cli(&args[2..]) as u8);
     }
     if args.get(1).is_some_and(|a| a == "profile") {
         return gtk::glib::ExitCode::from(personal::cli(&args[2..]) as u8);
@@ -38,6 +43,14 @@ fn main() -> gtk::glib::ExitCode {
         gtk::glib::OptionFlags::NONE,
         gtk::glib::OptionArg::None,
         "Present Nagi and summon the floating address bar",
+        None,
+    );
+    app.add_main_option(
+        "agent-control",
+        0u8.into(),
+        gtk::glib::OptionFlags::NONE,
+        gtk::glib::OptionArg::None,
+        "Enable local agent control; approve origin grants in Nagi",
         None,
     );
     app.add_main_option(
@@ -86,6 +99,15 @@ fn main() -> gtk::glib::ExitCode {
                 .flatten()
                 .unwrap_or(false);
             let b = browser::Browser::new(app, safe);
+            if cmd
+                .options_dict()
+                .lookup::<bool>("agent-control")
+                .ok()
+                .flatten()
+                .unwrap_or(false)
+            {
+                b.start_control();
+            }
             *slot.borrow_mut() = Some(b.clone());
             b
         });
@@ -112,6 +134,7 @@ fn main() -> gtk::glib::ExitCode {
     });
     let code = app.run();
     if let Some(b) = holder.borrow_mut().take() {
+        b.stop_control();
         b.save();
         b.writer.borrow_mut().take();
     }

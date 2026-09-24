@@ -49,6 +49,7 @@ jobs:
           trap 'sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns="$previous"' EXIT
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
+          GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/control_smoke.py
       - name: Compile release
         run: cargo build --locked --release
       - name: Package runnable Linux build

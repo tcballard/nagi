@@ -19,6 +19,7 @@ pub struct Tab {
     pub reader: Cell<bool>,
     pub failed: Cell<bool>,
     pub picking: Cell<bool>,
+    pub generation: Cell<u64>,
 }
 pub struct DownloadRow {
     pub download: webkit::Download,
@@ -30,6 +31,8 @@ pub struct DownloadRow {
 pub struct Browser {
     pub window: gtk::ApplicationWindow,
     pub safe_mode: bool,
+    pub control: RefCell<crate::control::Control>,
+    pub control_bar: gtk::Box,
     personal_css: gtk::CssProvider,
     personal_toolbar: gtk::Box,
     pub state: RefCell<State>,
@@ -183,6 +186,16 @@ impl Browser {
         let controls = gtk::WindowControls::new(gtk::PackType::End);
         strip_line.append(&controls);
         root.append(&strip_line);
+        let control_bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
+        control_bar.add_css_class("notice");
+        control_bar.append(&label(
+            "Agent control enabled · access requires your approval",
+            "",
+        ));
+        let stop_control = gtk::Button::with_label("Stop agent control");
+        control_bar.append(&stop_control);
+        control_bar.set_visible(false);
+        root.append(&control_bar);
         let chrome = gtk::Box::new(gtk::Orientation::Vertical, 12);
         chrome.add_css_class("chrome");
         chrome.add_css_class("address-card");
@@ -309,6 +322,8 @@ impl Browser {
         let b = Rc::new(Self {
             window,
             safe_mode,
+            control: RefCell::new(crate::control::Control::default()),
+            control_bar,
             personal_css,
             personal_toolbar,
             state: RefCell::new(state),
@@ -354,6 +369,12 @@ impl Browser {
             dirty: Cell::new(false),
             closing: Cell::new(false),
             storage_error: error,
+        });
+        let weak = Rc::downgrade(&b);
+        stop_control.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.stop_control();
+            }
         });
         let weak = Rc::downgrade(&b);
         b.suggestions.connect_row_activated(move |_, row| {
@@ -500,6 +521,7 @@ impl Browser {
         b.window.connect_close_request(move |_| {
             if let Some(b) = weak.upgrade() {
                 b.closing.set(true);
+                b.stop_control();
                 b.save();
                 for d in b.downloads.borrow().iter() {
                     if !d.done.get() {
@@ -780,6 +802,7 @@ impl Browser {
             reader: Cell::new(false),
             failed: Cell::new(false),
             picking: Cell::new(false),
+            generation: Cell::new(0),
         });
         self.tabs.borrow_mut().push(tab.clone());
         let weak = Rc::downgrade(self);
@@ -919,6 +942,8 @@ impl Browser {
         }
     }
     pub fn close_tab(self: &Rc<Self>, id: u64) {
+        self.control_event("tab.closed", id);
+        self.control.borrow_mut().shared.remove(&id);
         let index = self.tabs.borrow().iter().position(|t| t.id == id);
         let Some(i) = index else { return };
         let tab = self.tabs.borrow_mut().remove(i);
