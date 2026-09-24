@@ -725,11 +725,36 @@ impl Browser {
             }
         });
         tab.button.add_controller(click);
+        let drag = gtk::DragSource::new();
+        drag.set_actions(gtk::gdk::DragAction::MOVE);
+        drag.set_content(Some(&gtk::gdk::ContentProvider::for_value(&format!("nagi-tab-{id}").to_value())));
+        tab.button.add_controller(drag);
+        let drop = gtk::DropTarget::new(String::static_type(), gtk::gdk::DragAction::MOVE);
+        let weak = Rc::downgrade(self);
+        drop.connect_drop(move |_, value, _, _| {
+            let Some(b) = weak.upgrade() else { return false; };
+            let Ok(source) = value.get::<String>() else { return false; };
+            let Some(source) = source.strip_prefix("nagi-tab-").and_then(|s| s.parse::<u64>().ok()) else { return false; };
+            b.move_tab(source, id)
+        });
+        tab.button.add_controller(drop);
         if select {
             self.select(id);
         }
         self.dirty.set(true);
         tab
+    }
+    pub fn move_tab(&self, source: u64, destination: u64) -> bool {
+        let mut tabs = self.tabs.borrow_mut();
+        let Some(from) = tabs.iter().position(|t| t.id == source) else { return false; };
+        let Some(to) = tabs.iter().position(|t| t.id == destination) else { return false; };
+        if from == to { return true; }
+        let moved = tabs.remove(from);
+        tabs.insert(to, moved.clone());
+        let preceding = to.checked_sub(1).map(|n| tabs[n].button.clone());
+        self.strip.reorder_child_after(&moved.button, preceding.as_ref());
+        self.dirty.set(true);
+        true
     }
     pub fn select(self: &Rc<Self>, id: u64) {
         self.dismiss_address();
