@@ -15,6 +15,7 @@ pub struct Tab {
     pub button: gtk::Box,
     pub label: gtk::Label,
     pub internal_icon: gtk::Image,
+    pub favicon: gtk::Image,
     pub reader: Cell<bool>,
     pub failed: Cell<bool>,
     pub picking: Cell<bool>,
@@ -39,6 +40,11 @@ pub struct Browser {
     pub chrome: gtk::Box,
     root: gtk::Box,
     address_layer: gtk::Overlay,
+    composer_revealer: gtk::Revealer,
+    composer_open: Cell<bool>,
+    suggestions: gtk::ListBox,
+    suggestion_scroll: gtk::ScrolledWindow,
+    matches: RefCell<Vec<crate::suggestions::Suggestion>>,
     address_button: gtk::Button,
     pub address: gtk::Entry,
     address_error: gtk::Label,
@@ -95,12 +101,14 @@ impl Browser {
         } else {
             None
         };
+        let (width, height) = state.window.size();
         let window = gtk::ApplicationWindow::builder()
             .application(app)
             .title(APP_NAME)
-            .default_width(1180)
-            .default_height(800)
+            .default_width(width)
+            .default_height(height)
             .build();
+        if state.window.maximized { window.maximize(); }
         window.add_css_class("browser");
         window.set_icon_name(Some("nagi"));
         let root = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -161,6 +169,18 @@ impl Browser {
         address_error.set_wrap(true);
         address_error.set_visible(false);
         chrome.append(&address_error);
+        let suggestions = gtk::ListBox::new();
+        suggestions.set_selection_mode(gtk::SelectionMode::Single);
+        suggestions.set_activate_on_single_click(true);
+        suggestions.add_css_class("suggestions");
+        let suggestion_scroll = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .max_content_height(264)
+            .propagate_natural_height(true)
+            .child(&suggestions)
+            .visible(false)
+            .build();
+        chrome.append(&suggestion_scroll);
         let footer = gtk::Box::new(gtk::Orientation::Horizontal, 12);
         let hint = label("Search or paste a link · Esc to close", "composer-hint");
         hint.set_hexpand(true);
@@ -180,8 +200,14 @@ impl Browser {
         backdrop.set_vexpand(true);
         address_layer.set_child(Some(&backdrop));
         address_layer.add_overlay(&chrome);
-        address_layer.set_visible(false);
-        overlay.add_overlay(&address_layer);
+        address_layer.set_can_target(false);
+        let composer_revealer = gtk::Revealer::builder()
+            .transition_type(gtk::RevealerTransitionType::Crossfade)
+            .transition_duration(120)
+            .child(&address_layer)
+            .build();
+        composer_revealer.set_can_target(false);
+        overlay.add_overlay(&composer_revealer);
         let progress = gtk::ProgressBar::new();
         root.append(&progress);
         let notification = gtk::Box::new(gtk::Orientation::Horizontal, 10);
@@ -251,6 +277,11 @@ impl Browser {
             chrome,
             root,
             address_layer,
+            composer_revealer,
+            composer_open: Cell::new(false),
+            suggestions,
+            suggestion_scroll,
+            matches: RefCell::new(vec![]),
             address_button,
             address,
             address_error,
@@ -274,6 +305,33 @@ impl Browser {
             closing: Cell::new(false),
             storage_error: error,
         });
+        let weak = Rc::downgrade(&b);
+        b.suggestions.connect_row_activated(move |_, row| {
+            if let Some(b) = weak.upgrade() { b.activate_suggestion(row.index() as usize); }
+        });
+        let keys = gtk::EventControllerKey::new();
+        let weak = Rc::downgrade(&b);
+        keys.connect_key_pressed(move |_, key, _, _| {
+            if let Some(b) = weak.upgrade() {
+                if key == gtk::gdk::Key::Down || key == gtk::gdk::Key::Up {
+                    let count = b.matches.borrow().len() as i32;
+                    if count > 0 {
+                        let current = b.suggestions.selected_row().map(|r| r.index()).unwrap_or(-1);
+                        let next = if key == gtk::gdk::Key::Down { (current + 1).min(count - 1) } else { current - 1 };
+                        b.suggestions.select_row(b.suggestions.row_at_index(next).as_ref());
+                        return glib::Propagation::Stop;
+                    }
+                }
+            }
+            glib::Propagation::Proceed
+        });
+        b.address.add_controller(keys);
+        for property in ["default-width", "default-height", "maximized"] {
+            let weak = Rc::downgrade(&b);
+            b.window.connect_notify_local(Some(property), move |_, _| {
+                if let Some(b) = weak.upgrade() { b.dirty.set(true); }
+            });
+        }
         b.actions(app);
         b.menu(&menu);
         b.apply_appearance();
@@ -294,11 +352,13 @@ impl Browser {
         let weak = Rc::downgrade(&b);
         submit.connect_clicked(move |_| {
             if let Some(b) = weak.upgrade() {
-                b.navigate(&b.address.text());
+                b.submit_address();
             }
         });
+        let weak = Rc::downgrade(&b);
         b.address.connect_changed(move |entry| {
             submit.set_sensitive(!entry.text().trim().is_empty());
+            if let Some(b) = weak.upgrade() { b.refresh_suggestions(); }
         });
         let weak = Rc::downgrade(&b);
         plus.connect_clicked(move |_| {
@@ -313,10 +373,9 @@ impl Browser {
             }
         });
         let weak = Rc::downgrade(&b);
-        b.address.connect_activate(move |entry| {
+        b.address.connect_activate(move |_| {
             if let Some(b) = weak.upgrade() {
-                let input = entry.text().to_string();
-                b.navigate(&input);
+                b.submit_address();
             }
         });
         let weak = Rc::downgrade(&b);
@@ -437,6 +496,8 @@ impl Browser {
     pub fn save(&self) {
         let tabs = self.tabs.borrow();
         let mut state = self.state.borrow_mut();
+        let (width, height) = self.window.default_size();
+        state.window = WindowState { width, height, maximized: self.window.is_maximized() };
         state.tabs = tabs
             .iter()
             .filter(|t| !t.private)
@@ -470,6 +531,10 @@ impl Browser {
         let internal_icon = crate::icons::image(16);
         internal_icon.set_visible(uri == "about:blank");
         tab_content.append(&internal_icon);
+        let favicon = gtk::Image::from_icon_name("text-html-symbolic");
+        favicon.set_pixel_size(16);
+        favicon.set_visible(uri != "about:blank");
+        tab_content.append(&favicon);
         tab_content.append(&title);
         select_button.set_child(Some(&tab_content));
         button.append(&select_button);
@@ -494,6 +559,7 @@ impl Browser {
             button,
             label: title,
             internal_icon,
+            favicon,
             reader: Cell::new(false),
             failed: Cell::new(false),
             picking: Cell::new(false),
@@ -583,7 +649,7 @@ impl Browser {
                 self.dirty.set(true);
             }
             Err(e) => {
-                if self.address_layer.get_visible() {
+                if self.composer_open.get() {
                     self.address_error.set_text(&e);
                     self.address_error.set_visible(true);
                 } else {
@@ -625,7 +691,7 @@ impl Browser {
             "{}\nAddress / search · Ctrl+Alt+L or Ctrl+L",
             page.url
         )));
-        if !self.address_layer.get_visible() {
+        if !self.composer_open.get() {
             self.address.set_text(if page.url == "about:blank" {
                 ""
             } else {
@@ -650,6 +716,7 @@ impl Browser {
             let p = t.page.borrow();
             t.internal_icon
                 .set_visible(p.url == "about:blank" || t.reader.get());
+            t.favicon.set_visible(p.url != "about:blank" && !t.reader.get());
             t.label.set_text(&format!(
                 "{}{}{}",
                 if t.private { "◌ " } else { "" },
@@ -667,57 +734,19 @@ impl Browser {
         area.set_vexpand(true);
         area.set_halign(gtk::Align::Center);
         area.set_valign(gtk::Align::Center);
-        area.append(&label(
-            if tab.private {
-                "PRIVATE BROWSING"
-            } else {
-                "A LITTLE QUIETER"
-            },
-            "eyebrow",
-        ));
-        area.append(&label("Room to explore.", "brand"));
-        area.append(&label(
-            if tab.private {
-                "This tab keeps no history or session. Downloads remain on disk."
-            } else {
-                "Your next thought starts here."
-            },
-            "muted",
-        ));
-        let entry = gtk::Entry::builder()
-            .placeholder_text("Search the web or enter an address")
-            .width_chars(48)
-            .build();
-        area.append(&entry);
+        let start = gtk::Button::with_label("Search or paste a link");
         let weak = Rc::downgrade(self);
-        entry.connect_activate(move |e| {
-            if let Some(b) = weak.upgrade() {
-                b.navigate(&e.text());
-            }
+        start.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() { b.show_search(); }
         });
-        let links = gtk::Box::new(gtk::Orientation::Horizontal, 10);
-        for (text, url) in [
-            ("Omarchy", "https://omarchy.org"),
-            ("GitHub", "https://github.com"),
-            ("Bookmarks", ""),
-        ] {
-            let btn = gtk::Button::with_label(text);
-            let weak = Rc::downgrade(self);
-            btn.connect_clicked(move |_| {
-                if let Some(b) = weak.upgrade() {
-                    if url.is_empty() {
-                        b.show_panel("Bookmarks");
-                    } else {
-                        b.navigate(url);
-                    }
-                }
-            });
-            links.append(&btn);
+        area.append(&start);
+        area.append(&label("Ctrl+Alt+L", "muted"));
+        if tab.private {
+            let privacy = label("Private tab · History and session are not saved.\nDownloads remain on disk.", "muted");
+            privacy.set_wrap(true);
+            privacy.set_justify(gtk::Justification::Center);
+            area.append(&privacy);
         }
-        area.append(&links);
-        let hint = label("Ctrl+Alt+L / Ctrl+L  address     Ctrl+T  new tab", "muted");
-        hint.set_margin_top(24);
-        area.append(&hint);
         tab.holder.append(&area);
     }
     pub fn close_find(&self) {
@@ -728,14 +757,50 @@ impl Browser {
             }
         }
     }
+    fn refresh_suggestions(&self) {
+        if !self.composer_open.get() { return; }
+        while let Some(row) = self.suggestions.first_child() { self.suggestions.remove(&row); }
+        let tabs: Vec<_> = self.tabs.borrow().iter().map(|t| (t.id, t.page.borrow().clone(), t.private)).collect();
+        let private = self.tab().is_some_and(|t| t.private);
+        let matches = crate::suggestions::find(&self.address.text(), &self.state.borrow(), &tabs, private);
+        for item in &matches {
+            let row = gtk::Box::new(gtk::Orientation::Vertical, 3);
+            for (text, class) in [(&item.title[..], ""), (&format!("{} · {}", item.caption(), item.url), "muted")] {
+                let line = label(text, class);
+                line.set_xalign(0.0);
+                line.set_ellipsize(gtk::pango::EllipsizeMode::End);
+                line.set_max_width_chars(1);
+                line.set_hexpand(true);
+                row.append(&line);
+            }
+            self.suggestions.append(&row);
+        }
+        self.suggestions.unselect_all();
+        self.suggestion_scroll.set_visible(!matches.is_empty());
+        *self.matches.borrow_mut() = matches;
+    }
+    fn activate_suggestion(self: &Rc<Self>, index: usize) {
+        let item = self.matches.borrow().get(index).cloned();
+        if let Some(item) = item {
+            match item.kind {
+                crate::suggestions::Kind::Tab(id) => self.select(id),
+                _ => self.navigate(&item.url),
+            }
+        }
+    }
+    fn submit_address(self: &Rc<Self>) {
+        if let Some(row) = self.suggestions.selected_row() {
+            self.activate_suggestion(row.index() as usize);
+        } else { self.navigate(&self.address.text()); }
+    }
     pub fn show_search(&self) {
-        if !self.address_layer.get_visible() {
+        if !self.composer_open.get() {
             self.address.set_text("");
         }
         self.focus_composer();
     }
     pub fn show_address(&self) {
-        if !self.address_layer.get_visible() {
+        if !self.composer_open.get() {
             if let Some(tab) = self.tab() {
                 let page = tab.page.borrow();
                 self.address.set_text(if page.url == "about:blank" {
@@ -751,15 +816,22 @@ impl Browser {
         self.address_error.set_visible(false);
         self.chrome.set_visible(true);
         self.root.set_sensitive(false);
-        self.address_layer.set_visible(true);
+        self.composer_open.set(true);
+        self.address_layer.set_can_target(true);
+        self.composer_revealer.set_can_target(true);
+        self.composer_revealer.set_reveal_child(true);
+        self.refresh_suggestions();
         self.address.grab_focus();
         self.address.select_region(0, -1);
     }
     pub fn dismiss_address(&self) {
-        if !self.address_layer.get_visible() {
+        if !self.composer_open.get() {
             return;
         }
-        self.address_layer.set_visible(false);
+        self.composer_open.set(false);
+        self.address_layer.set_can_target(false);
+        self.composer_revealer.set_can_target(false);
+        self.composer_revealer.set_reveal_child(false);
         self.root.set_sensitive(true);
         if let Some(v) = self.view() {
             v.grab_focus();
@@ -899,7 +971,7 @@ impl Browser {
                 }
             }
             "escape" => {
-                if self.address_layer.get_visible() {
+                if self.composer_open.get() {
                     self.dismiss_address();
                     return;
                 }

@@ -17,11 +17,13 @@ requests=[]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         requests.append(self.path)
-        if self.path=='/download':
+        if self.path=='/favicon.svg':
+            body=b'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"><rect width="16" height="16" rx="3" fill="#30bc80"/></svg>';self.send_response(200);self.send_header('Content-Type','image/svg+xml')
+        elif self.path=='/download':
             body=b'Nagi download fixture.\n';self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Disposition','attachment; filename="nagi-test.txt"')
         else:
             body=(ROOT/'tests/fixture.html').read_bytes() if self.path!='/second' else b'<title>Second page</title><h1>Second page</h1>'
-            body+=b'<script>document.addEventListener("keydown",e=>{if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
+            body+=b'<link rel="icon" href="/favicon.svg"><script>document.addEventListener("keydown",e=>{if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
@@ -53,6 +55,7 @@ try:
         count=requests.count('/focus-check');key('F8')
         wait_for(lambda:requests.count('/focus-check')>count)
     assert_page_focus()
+    wait_for(lambda:'/favicon.svg' in requests)
     key('ctrl+alt+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-address.png')],check=True,env=env)
     xd('type','--clearmodifiers','--delay','40','quiet places to read');time.sleep(.4)
@@ -85,6 +88,16 @@ try:
     key('ctrl+w');key('ctrl+t');navigate(url+'second')
     wait_for(lambda:any(v['url']==url+'second' for v in state()['history']))
     key('ctrl+w');key('ctrl+shift+t');wait_for(lambda:any(v['url']==url+'second' for v in state()['tabs']))
+    # Suggestions switch to an existing tab without navigating or duplicating it.
+    key('ctrl+t');before=len(state()['tabs']);key('ctrl+alt+l')
+    xd('type','--clearmodifiers','Second page');time.sleep(.4)
+    subprocess.run(['import','-window',window,str(OUT/'nagi-suggestions.png')],check=True,env=env)
+    key('Down');key('Return');assert_page_focus()
+    wait_for(lambda:'Second page' in xd('getwindowname',window))
+    assert len(state()['tabs'])==before
+    # History selection navigates with the same keyboard interaction.
+    key('ctrl+alt+l');xd('type','--clearmodifiers','overlay-navigation');key('Down');key('Return')
+    wait_for(lambda:requests.count('/overlay-navigation')>=2);assert_page_focus()
     # Exercise the real save dialog and WebKit download lifecycle.
     navigate(url+'download')
     dialog=wait_for(lambda:xd('search','--onlyvisible','--name','Save download').splitlines()[0])
@@ -96,13 +109,17 @@ try:
     navigate(url);wait_for(lambda:any(v['url']==url for v in state()['history']))
     key('ctrl+b');subprocess.run(['import','-window',window,str(OUT/'nagi-browser.png')],check=True,env=env);key('Escape')
     key('ctrl+t');key('Escape');subprocess.run(['import','-window',window,str(OUT/'nagi-welcome.png')],check=True,env=env)
+    xd('windowsize',window,'1040','720');time.sleep(1)
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
     saved=state();assert len(saved['bookmarks'])==1
+    assert saved['window']['width']==1040 and saved['window']['height']==720
     p=subprocess.Popen([str(BINARY)],env=env,stdout=log,stderr=log)
     window=wait_for(lambda:xd('search','--onlyvisible','--name','Nagi').splitlines()[0]);xd('windowfocus',window)
     time.sleep(1);assert state()['tabs']==saved['tabs']
+    geometry=xd('getwindowgeometry','--shell',window)
+    assert 'WIDTH=1040' in geometry and 'HEIGHT=720' in geometry
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
-    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
+    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local tab and history suggestions via keyboard','favicon requested from local fixture','window dimensions restored after restart','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
     (OUT/'gui-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 finally:
     subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)

@@ -3,6 +3,7 @@ mod core;
 mod icons;
 mod panels;
 mod storage;
+mod suggestions;
 mod theme;
 mod web;
 use gtk::{gio, prelude::*};

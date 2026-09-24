@@ -67,6 +67,10 @@ window.browser {{ background: {bg}; color: {fg}; }}
 .browser .chrome button.composer-submit {{ background: {fg}; color: {bg}; border-radius: 18px; min-width: 36px; min-height: 36px; padding: 0; }}
 .browser .chrome button.composer-submit:hover {{ background: {accent}; color: {bg}; }}
 .browser .chrome button.composer-submit:disabled {{ background: alpha({fg},0.10); color: alpha({fg},0.30); }}
+.browser .suggestions {{ background: transparent; color: {fg}; }}
+.browser .suggestions row {{ padding: 9px 10px; border-radius: 8px; }}
+.browser .suggestions row:hover {{ background: alpha({fg},0.06); }}
+.browser .suggestions row:selected {{ background: alpha({accent},0.16); color: {fg}; }}
 .browser .tab {{ border-radius: 9px; padding: 2px 3px; margin: 3px 0; }}
 .browser .tab.active {{ background: alpha({fg},0.10); }}
 .browser .tab.private {{ border-bottom: 2px solid {accent}; }}
