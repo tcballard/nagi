@@ -55,6 +55,7 @@ jobs:
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/control_smoke.py
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/extensions_smoke.py
+          GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/compat_smoke.py
       - name: Compile release
         run: cargo build --locked --release
       - name: Package runnable Linux build

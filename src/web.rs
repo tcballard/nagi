@@ -374,6 +374,18 @@ impl Browser {
             m.add_filter(filter);
         }
         m.remove_all_scripts();
+        // Only the explicit compatibility runner observes page errors. This
+        // does not add a method to the agent control socket.
+        if std::env::var_os("NAGI_COMPAT_PROBE").is_some() {
+            m.add_script(&webkit::UserScript::for_world(
+                "window.__nagiCompatErrors=[];window.addEventListener('error',e=>window.__nagiCompatErrors.push(String(e.message||'uncaught error')));window.addEventListener('unhandledrejection',e=>window.__nagiCompatErrors.push(String(e.reason||'unhandled rejection')));",
+                webkit::UserContentInjectedFrames::TopFrame,
+                webkit::UserScriptInjectionTime::Start,
+                "nagi-compat",
+                &[],
+                &[],
+            ));
+        }
         // Retain the named world across evaluate_javascript calls. Without a
         // registered user script WebKit can discard an otherwise unowned world.
         m.add_script(&webkit::UserScript::for_world(
