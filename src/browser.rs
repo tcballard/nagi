@@ -111,7 +111,8 @@ impl Browser {
         strip_line.add_css_class("tab-strip");
         strip_line.set_margin_start(8);
         strip_line.set_margin_end(8);
-        let brand = label("NAGI", "eyebrow");
+        let brand = crate::icons::image(24);
+        brand.set_valign(gtk::Align::Center);
         brand.set_tooltip_text(Some("Nagi — a quiet browser"));
         brand.set_margin_end(8);
         strip_line.append(&brand);
