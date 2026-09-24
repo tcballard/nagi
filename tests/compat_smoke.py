@@ -11,7 +11,7 @@ root = pathlib.Path(__file__).resolve().parents[1]
 
 class Page(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
-        body = b'<!doctype html><title>Fixture</title><h1>Compatibility fixture</h1><p>Page text for the screenshot check.</p><span id="account">Signed in</span>'
+        body = b'<!doctype html><title>Fixture</title><style>html,body{min-height:100%;background:linear-gradient(90deg,#dbeafe,#fee2e2)}</style><h1>Compatibility fixture</h1><p>Page text for the screenshot check.</p><span id="account">Signed in</span>'
         self.send_response(200)
         self.send_header('Content-Type', 'text/html')
         self.send_header('Content-Length', str(len(body)))

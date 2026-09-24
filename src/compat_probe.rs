@@ -3,7 +3,13 @@
 use crate::{browser::Browser, core};
 use gtk::{gio, glib, prelude::*};
 use serde_json::{json, Value};
-use std::{cell::Cell, fs, path::PathBuf, rc::Rc, time::{Duration, Instant}};
+use std::{
+    cell::Cell,
+    fs,
+    path::PathBuf,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 use webkit::prelude::*;
 
 fn finish(app: &gtk::Application, output: &PathBuf, done: &Cell<bool>, result: Value) {
@@ -36,10 +42,7 @@ fn run(args: &[String]) -> Result<i32, String> {
     // The runner is never an agent browsing session and never accepts an
     // arbitrary script from the site inventory.
     std::env::set_var("NAGI_COMPAT_PROBE", "1");
-    let app = gtk::Application::new(
-        Some(core::APP_ID),
-        gio::ApplicationFlags::NON_UNIQUE,
-    );
+    let app = gtk::Application::new(Some(core::APP_ID), gio::ApplicationFlags::NON_UNIQUE);
     app.connect_activate(move |app| {
         let started = Instant::now();
         let browser = Browser::new(app, true);
@@ -174,6 +177,9 @@ fn run(args: &[String]) -> Result<i32, String> {
 pub fn cli(args: &[String]) -> i32 {
     match run(args) {
         Ok(code) => code,
-        Err(error) => { eprintln!("{error}"); 2 }
+        Err(error) => {
+            eprintln!("{error}");
+            2
+        }
     }
 }
