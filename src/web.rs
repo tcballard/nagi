@@ -174,8 +174,12 @@ impl Browser {
                             Some(ref title) if !title.is_empty() => format!("{title}\n{u}"),
                             _ => u.to_string(),
                         });
-                        b.view().as_ref().map(|v| v.set_tooltip_text(tooltip.as_deref()));
-                    } else if let Some(v) = b.view() { v.set_tooltip_text(None); }
+                        b.view()
+                            .as_ref()
+                            .map(|v| v.set_tooltip_text(tooltip.as_deref()));
+                    } else if let Some(v) = b.view() {
+                        v.set_tooltip_text(None);
+                    }
                 }
             }
         });

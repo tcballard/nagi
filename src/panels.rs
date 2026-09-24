@@ -190,7 +190,9 @@ impl Browser {
                     let chrome = gtk::Button::with_label("Import Chromium / Comet bookmarks JSON");
                     let weak = Rc::downgrade(self);
                     chrome.connect_clicked(move |_| {
-                        if let Some(b) = weak.upgrade() { b.import_browser_bookmarks(); }
+                        if let Some(b) = weak.upgrade() {
+                            b.import_browser_bookmarks();
+                        }
                     });
                     content.append(&row);
                     content.append(&chrome);
@@ -239,11 +241,19 @@ impl Browser {
                 content.append(&label("Tab layout", ""));
                 let layouts = ["Top", "Left"];
                 let layout = gtk::DropDown::from_strings(&layouts);
-                layout.set_selected(if self.state.borrow().settings.tab_layout == "Left" { 1 } else { 0 });
+                layout.set_selected(if self.state.borrow().settings.tab_layout == "Left" {
+                    1
+                } else {
+                    0
+                });
                 let weak = Rc::downgrade(self);
                 layout.connect_selected_notify(move |d| {
                     if let Some(b) = weak.upgrade() {
-                        if let Err(e) = b.set_preference("tabs.layout", layouts[d.selected() as usize]) { b.notice(&e); }
+                        if let Err(e) =
+                            b.set_preference("tabs.layout", layouts[d.selected() as usize])
+                        {
+                            b.notice(&e);
+                        }
                     }
                 });
                 content.append(&layout);
@@ -252,7 +262,12 @@ impl Browser {
                 let weak = Rc::downgrade(self);
                 preview.connect_toggled(move |c| {
                     if let Some(b) = weak.upgrade() {
-                        if let Err(e) = b.set_preference("features.link_previews", if c.is_active() { "true" } else { "false" }) { b.notice(&e); }
+                        if let Err(e) = b.set_preference(
+                            "features.link_previews",
+                            if c.is_active() { "true" } else { "false" },
+                        ) {
+                            b.notice(&e);
+                        }
                     }
                 });
                 content.append(&preview);
@@ -261,10 +276,14 @@ impl Browser {
                 note.set_wrap(true);
                 content.append(&note);
                 for (name, fallback) in [
-                    ("search", "<Control><Alt>l"), ("address", "<Control>l"),
-                    ("new", "<Control>t"), ("tabs", "<Control>k"),
-                    ("history", "<Control>h"), ("bookmarks", "<Control>b"),
-                    ("downloads", "<Control>j"), ("find", "<Control>f"),
+                    ("search", "<Control><Alt>l"),
+                    ("address", "<Control>l"),
+                    ("new", "<Control>t"),
+                    ("tabs", "<Control>k"),
+                    ("history", "<Control>h"),
+                    ("bookmarks", "<Control>b"),
+                    ("downloads", "<Control>j"),
+                    ("find", "<Control>f"),
                     ("reload", "<Control>r"),
                 ] {
                     let row = gtk::Box::new(gtk::Orientation::Horizontal, 6);
@@ -273,13 +292,26 @@ impl Browser {
                     title.set_xalign(0.0);
                     row.append(&title);
                     let entry = gtk::Entry::new();
-                    entry.set_text(self.state.borrow().settings.shortcuts.get(name).map(String::as_str).unwrap_or(fallback));
+                    entry.set_text(
+                        self.state
+                            .borrow()
+                            .settings
+                            .shortcuts
+                            .get(name)
+                            .map(String::as_str)
+                            .unwrap_or(fallback),
+                    );
                     entry.set_hexpand(true);
                     let weak = Rc::downgrade(self);
                     entry.connect_activate(move |e| {
                         if let Some(b) = weak.upgrade() {
-                            if let Err(error) = b.set_preference(&format!("shortcuts.{name}"), &e.text()) { b.notice(&error); }
-                            else { e.add_css_class("success"); }
+                            if let Err(error) =
+                                b.set_preference(&format!("shortcuts.{name}"), &e.text())
+                            {
+                                b.notice(&error);
+                            } else {
+                                e.add_css_class("success");
+                            }
                         }
                     });
                     row.append(&entry);
@@ -299,7 +331,11 @@ impl Browser {
                 let weak = Rc::downgrade(self);
                 drop.connect_selected_notify(move |d| {
                     if let Some(b) = weak.upgrade() {
-                        if let Err(e) = b.set_preference("search.engine", options[d.selected() as usize]) { b.notice(&e); }
+                        if let Err(e) =
+                            b.set_preference("search.engine", options[d.selected() as usize])
+                        {
+                            b.notice(&e);
+                        }
                     }
                 });
                 content.append(&drop);
@@ -315,7 +351,10 @@ impl Browser {
                 let weak = Rc::downgrade(self);
                 drop.connect_selected_notify(move |d| {
                     if let Some(b) = weak.upgrade() {
-                        if let Err(e) = b.set_preference("appearance", modes[d.selected() as usize]) { b.notice(&e); }
+                        if let Err(e) = b.set_preference("appearance", modes[d.selected() as usize])
+                        {
+                            b.notice(&e);
+                        }
                     }
                 });
                 content.append(&drop);
@@ -336,8 +375,17 @@ impl Browser {
                     let weak = Rc::downgrade(self);
                     check.connect_toggled(move |c| {
                         if let Some(b) = weak.upgrade() {
-                            let preference = if key == "restore" { "restore_tabs" } else { "block_trackers" };
-                            if let Err(e) = b.set_preference(preference, if c.is_active() { "true" } else { "false" }) { b.notice(&e); }
+                            let preference = if key == "restore" {
+                                "restore_tabs"
+                            } else {
+                                "block_trackers"
+                            };
+                            if let Err(e) = b.set_preference(
+                                preference,
+                                if c.is_active() { "true" } else { "false" },
+                            ) {
+                                b.notice(&e);
+                            }
                         }
                     });
                     content.append(&check);
@@ -351,7 +399,9 @@ impl Browser {
                 let weak = Rc::downgrade(self);
                 zoom.connect_value_changed(move |s| {
                     if let Some(b) = weak.upgrade() {
-                        if let Err(e) = b.set_preference("zoom", &(s.value() / 100.0).to_string()) { b.notice(&e); }
+                        if let Err(e) = b.set_preference("zoom", &(s.value() / 100.0).to_string()) {
+                            b.notice(&e);
+                        }
                     }
                 });
                 content.append(&zoom);
@@ -500,18 +550,25 @@ impl Browser {
         });
     }
     fn import_browser_bookmarks(self: &Rc<Self>) {
-        let dialog = gtk::FileDialog::builder().title("Import browser bookmarks JSON").build();
+        let dialog = gtk::FileDialog::builder()
+            .title("Import browser bookmarks JSON")
+            .build();
         let weak = Rc::downgrade(self);
         dialog.open(Some(&self.window), gio::Cancellable::NONE, move |result| {
             if let Ok(file) = result {
                 file.load_contents_async(gio::Cancellable::NONE, move |result| {
                     if let Some(b) = weak.upgrade() {
-                        match result.map_err(|e| e.to_string()).and_then(|(bytes, _)| crate::import::bookmarks(&bytes)) {
+                        match result
+                            .map_err(|e| e.to_string())
+                            .and_then(|(bytes, _)| crate::import::bookmarks(&bytes))
+                        {
                             Ok(pages) => {
                                 let mut state = b.state.borrow_mut();
                                 let before = state.bookmarks.len();
                                 for page in pages {
-                                    if !state.bookmarks.iter().any(|p| p.url == page.url) { state.bookmarks.push(page); }
+                                    if !state.bookmarks.iter().any(|p| p.url == page.url) {
+                                        state.bookmarks.push(page);
+                                    }
                                 }
                                 let added = state.bookmarks.len() - before;
                                 drop(state);

@@ -99,7 +99,10 @@ impl Browser {
             Err(e) => (State::default(), Some(e)),
         };
         let config_error = match config::read() {
-            Ok(Some(settings)) => { state.settings = settings; None }
+            Ok(Some(settings)) => {
+                state.settings = settings;
+                None
+            }
             Ok(None) => None,
             Err(e) => Some(e),
         };
@@ -504,10 +507,14 @@ impl Browser {
                     b.apply_tab_layout();
                     b.apply_shortcuts();
                     b.apply_appearance();
-                    if settings.block != old.block { b.compile_filter(); }
+                    if settings.block != old.block {
+                        b.compile_filter();
+                    }
                     if settings.zoom != old.zoom {
                         for t in b.tabs.borrow().iter() {
-                            if let Some(v) = t.view.borrow().as_ref() { v.set_zoom_level(settings.zoom); }
+                            if let Some(v) = t.view.borrow().as_ref() {
+                                v.set_zoom_level(settings.zoom);
+                            }
                         }
                     }
                     if *b.panel_kind.borrow() == "Settings" && b.panel.is_visible() {
@@ -548,7 +555,9 @@ impl Browser {
         if let Some(id) = id {
             b.select(id);
         }
-        if let Some(e) = config_error { b.notice(&e); }
+        if let Some(e) = config_error {
+            b.notice(&e);
+        }
         if let Some(error) = &b.storage_error {
             b.notice(&format!(
                 "{error} This session will not overwrite saved data."
@@ -574,10 +583,14 @@ impl Browser {
         self.apply_tab_layout();
         self.apply_shortcuts();
         self.apply_appearance();
-        if next.block != previous.block { self.compile_filter(); }
+        if next.block != previous.block {
+            self.compile_filter();
+        }
         if next.zoom != previous.zoom {
             for t in self.tabs.borrow().iter() {
-                if let Some(v) = t.view.borrow().as_ref() { v.set_zoom_level(next.zoom); }
+                if let Some(v) = t.view.borrow().as_ref() {
+                    v.set_zoom_level(next.zoom);
+                }
             }
         }
         self.dirty.set(true);
@@ -598,20 +611,34 @@ impl Browser {
         }
         self.top_scroller.set_visible(!vertical);
         self.tab_sidebar.set_visible(vertical);
-        if vertical { self.strip.add_css_class("vertical-tabs"); }
-        else { self.strip.remove_css_class("vertical-tabs"); }
+        if vertical {
+            self.strip.add_css_class("vertical-tabs");
+        } else {
+            self.strip.remove_css_class("vertical-tabs");
+        }
     }
     pub fn apply_shortcuts(&self) {
         for (action, fallback) in [
-            ("search", "<Control><Alt>l"), ("address", "<Control>l"),
-            ("new", "<Control>t"), ("tabs", "<Control>k"),
-            ("history", "<Control>h"), ("bookmarks", "<Control>b"),
-            ("downloads", "<Control>j"), ("find", "<Control>f"),
+            ("search", "<Control><Alt>l"),
+            ("address", "<Control>l"),
+            ("new", "<Control>t"),
+            ("tabs", "<Control>k"),
+            ("history", "<Control>h"),
+            ("bookmarks", "<Control>b"),
+            ("downloads", "<Control>j"),
+            ("find", "<Control>f"),
             ("reload", "<Control>r"),
         ] {
-            let accel = self.state.borrow().settings.shortcuts.get(action).cloned()
+            let accel = self
+                .state
+                .borrow()
+                .settings
+                .shortcuts
+                .get(action)
+                .cloned()
                 .unwrap_or_else(|| fallback.to_string());
-            self.app.set_accels_for_action(&format!("win.{action}"), &[accel.as_str()]);
+            self.app
+                .set_accels_for_action(&format!("win.{action}"), &[accel.as_str()]);
         }
     }
     pub fn tab(&self) -> Option<Rc<Tab>> {
@@ -727,14 +754,25 @@ impl Browser {
         tab.button.add_controller(click);
         let drag = gtk::DragSource::new();
         drag.set_actions(gtk::gdk::DragAction::MOVE);
-        drag.set_content(Some(&gtk::gdk::ContentProvider::for_value(&format!("nagi-tab-{id}").to_value())));
+        drag.set_content(Some(&gtk::gdk::ContentProvider::for_value(
+            &format!("nagi-tab-{id}").to_value(),
+        )));
         tab.button.add_controller(drag);
         let drop = gtk::DropTarget::new(String::static_type(), gtk::gdk::DragAction::MOVE);
         let weak = Rc::downgrade(self);
         drop.connect_drop(move |_, value, _, _| {
-            let Some(b) = weak.upgrade() else { return false; };
-            let Ok(source) = value.get::<String>() else { return false; };
-            let Some(source) = source.strip_prefix("nagi-tab-").and_then(|s| s.parse::<u64>().ok()) else { return false; };
+            let Some(b) = weak.upgrade() else {
+                return false;
+            };
+            let Ok(source) = value.get::<String>() else {
+                return false;
+            };
+            let Some(source) = source
+                .strip_prefix("nagi-tab-")
+                .and_then(|s| s.parse::<u64>().ok())
+            else {
+                return false;
+            };
             b.move_tab(source, id)
         });
         tab.button.add_controller(drop);
@@ -746,13 +784,20 @@ impl Browser {
     }
     pub fn move_tab(&self, source: u64, destination: u64) -> bool {
         let mut tabs = self.tabs.borrow_mut();
-        let Some(from) = tabs.iter().position(|t| t.id == source) else { return false; };
-        let Some(to) = tabs.iter().position(|t| t.id == destination) else { return false; };
-        if from == to { return true; }
+        let Some(from) = tabs.iter().position(|t| t.id == source) else {
+            return false;
+        };
+        let Some(to) = tabs.iter().position(|t| t.id == destination) else {
+            return false;
+        };
+        if from == to {
+            return true;
+        }
         let moved = tabs.remove(from);
         tabs.insert(to, moved.clone());
         let preceding = to.checked_sub(1).map(|n| tabs[n].button.clone());
-        self.strip.reorder_child_after(&moved.button, preceding.as_ref());
+        self.strip
+            .reorder_child_after(&moved.button, preceding.as_ref());
         self.dirty.set(true);
         true
     }
@@ -1099,11 +1144,21 @@ impl Browser {
         if name != "address" && name != "search" && name != "escape" {
             self.dismiss_address();
         }
-        if let Some(digit) = name.strip_prefix("tab-").and_then(|s| s.parse::<usize>().ok()) {
+        if let Some(digit) = name
+            .strip_prefix("tab-")
+            .and_then(|s| s.parse::<usize>().ok())
+        {
             let tabs = self.tabs.borrow();
-            let selected = if digit == 9 { tabs.last() } else { tabs.get(digit - 1) }.map(|t| t.id);
+            let selected = if digit == 9 {
+                tabs.last()
+            } else {
+                tabs.get(digit - 1)
+            }
+            .map(|t| t.id);
             drop(tabs);
-            if let Some(id) = selected { self.select(id); }
+            if let Some(id) = selected {
+                self.select(id);
+            }
             return;
         }
         match name {
