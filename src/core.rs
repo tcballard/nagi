@@ -20,6 +20,11 @@ pub struct Settings {
     pub tab_layout: String,
     pub link_previews: bool,
     pub shortcuts: BTreeMap<String, String>,
+    pub density: String,
+    pub sidebar_width: i32,
+    pub accent: String,
+    pub new_tab_url: String,
+    pub toolbar_actions: Vec<String>,
 }
 impl Default for Settings {
     fn default() -> Self {
@@ -32,6 +37,11 @@ impl Default for Settings {
             tab_layout: "Top".into(),
             link_previews: false,
             shortcuts: BTreeMap::new(),
+            density: "Comfortable".into(),
+            sidebar_width: 210,
+            accent: String::new(),
+            new_tab_url: String::new(),
+            toolbar_actions: vec![],
         }
     }
 }
@@ -270,3 +280,4 @@ mod tests {
         assert_eq!(html("<script>\"&"), "&lt;script&gt;&quot;&amp;");
     }
 }
+

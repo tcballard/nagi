@@ -45,3 +45,23 @@ GTK fixture are delegated to each PR's GitHub Actions run, not claimed locally.
 New CLI integration test: `python3 tests/config_transactions.py` after debug build.
 Live Omarchy/Wayland, authenticated sites, media and long-session acceptance
 remain required. Existing VERIFICATION.md results apply only to their stated revisions.
+
+## 2. Portable personalisation
+
+New schema-discoverable settings: `layout.density`, `tabs.sidebar_width`,
+`appearance.accent`, `new_tab.url`, and `toolbar.actions`. Settings exposes the
+same values; changes apply live. Custom new-tab URLs require HTTP(S), cannot
+embed credentials, and never replace private new tabs.
+
+`nagi profile export research > research.json` exports preferences only.
+`nagi profile check < research.json` validates without changing settings.
+`nagi profile apply --if-revision N < research.json` imports atomically; undo
+works normally. Profiles are portable JSON with their own version; store them
+in your own Git repository if desired. They contain no history/cookies/tokens.
+Profiles are snapshots applied to the current browser, not isolated login accounts.
+
+Close all Nagi windows and launch `nagi --safe-mode` to bypass personalisation.
+It starts with defaults, does not restore/save sessions or edit settings, and
+will not load extensions or start agent control. Normal startup restores your
+saved preferences. Safe mode is selected at startup; sending it to an already
+running browser does not change that process's mode.

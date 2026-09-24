@@ -29,6 +29,9 @@ pub struct DownloadRow {
 }
 pub struct Browser {
     pub window: gtk::ApplicationWindow,
+    pub safe_mode: bool,
+    personal_css: gtk::CssProvider,
+    personal_toolbar: gtk::Box,
     pub state: RefCell<State>,
     pub writer: RefCell<Option<storage::Writer>>,
     pub tabs: RefCell<Vec<Rc<Tab>>>,
@@ -92,7 +95,7 @@ pub fn clear(b: &gtk::Box) {
     }
 }
 impl Browser {
-    pub fn new(app: &gtk::Application) -> Rc<Self> {
+    pub fn new(app: &gtk::Application, safe_mode: bool) -> Rc<Self> {
         let path = state_dir().join("state.json");
         let (mut state, error) = match storage::read(&path) {
             Ok(s) => (s, None),
@@ -106,10 +109,11 @@ impl Browser {
             Ok(None) => None,
             Err(e) => Some(e),
         };
+        if safe_mode { state.settings = Settings::default(); state.settings.restore = false; }
         let saved = state.tabs.clone();
         let selected = state.active;
         let restore = state.settings.restore;
-        let writer = if error.is_none() {
+        let writer = if error.is_none() && !safe_mode {
             Some(storage::Writer::new(path))
         } else {
             None
@@ -166,6 +170,8 @@ impl Browser {
             "Address / search · Ctrl+Alt+L or Ctrl+L",
         );
         strip_line.append(&address_button);
+        let personal_toolbar = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+        strip_line.append(&personal_toolbar);
         let menu = gtk::MenuButton::builder()
             .icon_name("open-menu-symbolic")
             .tooltip_text("Browser menu")
@@ -290,9 +296,14 @@ impl Browser {
             &css,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        let personal_css = gtk::CssProvider::new();
+        gtk::style_context_add_provider_for_display(&gtk::gdk::Display::default().unwrap(), &personal_css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
         let settings_snapshot = state.settings.clone();
         let b = Rc::new(Self {
             window,
+            safe_mode,
+            personal_css,
+            personal_toolbar,
             state: RefCell::new(state),
             writer: RefCell::new(writer),
             tabs: RefCell::new(vec![]),
@@ -499,11 +510,12 @@ impl Browser {
             if b.closing.get() {
                 return glib::ControlFlow::Break;
             }
-            if let Ok(Some(settings)) = config::read() {
+            if let Ok(Some(settings)) = if b.safe_mode { Ok(None) } else { config::read() } {
                 if settings != *b.settings_snapshot.borrow() {
                     let old = b.state.borrow().settings.clone();
                     b.state.borrow_mut().settings = settings.clone();
                     *b.settings_snapshot.borrow_mut() = settings.clone();
+                    b.apply_personalisation();
                     b.apply_tab_layout();
                     b.apply_shortcuts();
                     b.apply_appearance();
@@ -539,6 +551,7 @@ impl Browser {
             }
             glib::ControlFlow::Continue
         });
+        b.apply_personalisation();
         if restore {
             for page in saved {
                 let tab = b.new_tab(&page.url, false, false);
@@ -555,6 +568,7 @@ impl Browser {
         if let Some(id) = id {
             b.select(id);
         }
+        if safe_mode { b.notice("Safe mode: personalisation, extensions and agent control are disabled. Close Nagi before restarting normally."); }
         if let Some(e) = config_error {
             b.notice(&e);
         }
@@ -566,10 +580,12 @@ impl Browser {
         b
     }
     pub fn set_preference(self: &Rc<Self>, key: &str, value: &str) -> Result<(), String> {
+        if self.safe_mode { return Err("Settings are read-only in safe mode".into()); }
         let previous = self.state.borrow().settings.clone();
         let next = config::change(key, value)?;
         self.state.borrow_mut().settings = next.clone();
         *self.settings_snapshot.borrow_mut() = next.clone();
+        self.apply_personalisation();
         self.apply_tab_layout();
         self.apply_shortcuts();
         self.apply_appearance();
@@ -585,6 +601,21 @@ impl Browser {
         }
         self.dirty.set(true);
         Ok(())
+    }
+    pub fn apply_personalisation(self: &Rc<Self>) {
+        let settings = self.state.borrow().settings.clone();
+        self.tab_sidebar.set_size_request(settings.sidebar_width, -1);
+        let mut css = String::new();
+        if settings.density == "Compact" { css.push_str(".browser .tab button { padding: 2px 4px; min-height: 22px; } .browser .tab-strip { padding: 2px; }"); }
+        if !settings.accent.is_empty() { css.push_str(&format!(".browser .tab.active {{ border-color: {}; }} .browser progressbar progress {{ background: {}; }}", settings.accent, settings.accent)); }
+        self.personal_css.load_from_data(&css);
+        clear(&self.personal_toolbar);
+        for action in settings.toolbar_actions {
+            let button = gtk::Button::with_label(&action);
+            let weak = Rc::downgrade(self);
+            button.connect_clicked(move |_| { if let Some(b) = weak.upgrade() { b.command(&action); } });
+            self.personal_toolbar.append(&button);
+        }
     }
     pub fn apply_tab_layout(&self) {
         let vertical = self.state.borrow().settings.tab_layout == "Left";
@@ -669,6 +700,8 @@ impl Browser {
         }
     }
     pub fn new_tab(self: &Rc<Self>, uri: &str, private: bool, select: bool) -> Rc<Tab> {
+        let custom_url = self.state.borrow().settings.new_tab_url.clone();
+        let uri = if uri == "about:blank" && !private && !self.safe_mode && !custom_url.is_empty() { custom_url.as_str() } else { uri };
         let id = self.next.get();
         self.next.set(id + 1);
         let holder = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -1330,3 +1363,4 @@ impl Browser {
         button.set_menu_model(Some(&menu));
     }
 }
+
