@@ -161,7 +161,10 @@ impl Browser {
         let weak = Rc::downgrade(self);
         let wt = Rc::downgrade(tab);
         view.connect_web_process_terminated(move |_, _| {
-            if let Some(t) = wt.upgrade() { t.failed.set(true); t.generation.set(t.generation.get().wrapping_add(1)); }
+            if let Some(t) = wt.upgrade() {
+                t.failed.set(true);
+                t.generation.set(t.generation.get().wrapping_add(1));
+            }
             if let Some(b) = weak.upgrade() {
                 b.notice("This page stopped responding. Reload it to continue.");
             }
@@ -591,4 +594,3 @@ impl Browser {
         });
     }
 }
-

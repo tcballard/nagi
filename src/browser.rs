@@ -112,7 +112,10 @@ impl Browser {
             Ok(None) => None,
             Err(e) => Some(e),
         };
-        if safe_mode { state.settings = Settings::default(); state.settings.restore = false; }
+        if safe_mode {
+            state.settings = Settings::default();
+            state.settings.restore = false;
+        }
         let saved = state.tabs.clone();
         let selected = state.active;
         let restore = state.settings.restore;
@@ -185,7 +188,10 @@ impl Browser {
         root.append(&strip_line);
         let control_bar = gtk::Box::new(gtk::Orientation::Horizontal, 8);
         control_bar.add_css_class("notice");
-        control_bar.append(&label("Agent control enabled · access requires your approval", ""));
+        control_bar.append(&label(
+            "Agent control enabled · access requires your approval",
+            "",
+        ));
         let stop_control = gtk::Button::with_label("Stop agent control");
         control_bar.append(&stop_control);
         control_bar.set_visible(false);
@@ -307,7 +313,11 @@ impl Browser {
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
         let personal_css = gtk::CssProvider::new();
-        gtk::style_context_add_provider_for_display(&gtk::gdk::Display::default().unwrap(), &personal_css, gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+        gtk::style_context_add_provider_for_display(
+            &gtk::gdk::Display::default().unwrap(),
+            &personal_css,
+            gtk::STYLE_PROVIDER_PRIORITY_APPLICATION + 1,
+        );
         let settings_snapshot = state.settings.clone();
         let b = Rc::new(Self {
             window,
@@ -361,7 +371,11 @@ impl Browser {
             storage_error: error,
         });
         let weak = Rc::downgrade(&b);
-        stop_control.connect_clicked(move |_| { if let Some(b) = weak.upgrade() { b.stop_control(); } });
+        stop_control.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.stop_control();
+            }
+        });
         let weak = Rc::downgrade(&b);
         b.suggestions.connect_row_activated(move |_, row| {
             if let Some(b) = weak.upgrade() {
@@ -525,7 +539,11 @@ impl Browser {
             if b.closing.get() {
                 return glib::ControlFlow::Break;
             }
-            if let Ok(Some(settings)) = if b.safe_mode { Ok(None) } else { config::read() } {
+            if let Ok(Some(settings)) = if b.safe_mode {
+                Ok(None)
+            } else {
+                config::read()
+            } {
                 if settings != *b.settings_snapshot.borrow() {
                     let old = b.state.borrow().settings.clone();
                     b.state.borrow_mut().settings = settings.clone();
@@ -583,7 +601,9 @@ impl Browser {
         if let Some(id) = id {
             b.select(id);
         }
-        if safe_mode { b.notice("Safe mode: personalisation, extensions and agent control are disabled. Close Nagi before restarting normally."); }
+        if safe_mode {
+            b.notice("Safe mode: personalisation, extensions and agent control are disabled. Close Nagi before restarting normally.");
+        }
         if let Some(e) = config_error {
             b.notice(&e);
         }
@@ -595,7 +615,9 @@ impl Browser {
         b
     }
     pub fn set_preference(self: &Rc<Self>, key: &str, value: &str) -> Result<(), String> {
-        if self.safe_mode { return Err("Settings are read-only in safe mode".into()); }
+        if self.safe_mode {
+            return Err("Settings are read-only in safe mode".into());
+        }
         let previous = self.state.borrow().settings.clone();
         let next = config::change(key, value)?;
         self.state.borrow_mut().settings = next.clone();
@@ -619,16 +641,25 @@ impl Browser {
     }
     pub fn apply_personalisation(self: &Rc<Self>) {
         let settings = self.state.borrow().settings.clone();
-        self.tab_sidebar.set_size_request(settings.sidebar_width, -1);
+        self.tab_sidebar
+            .set_size_request(settings.sidebar_width, -1);
         let mut css = String::new();
-        if settings.density == "Compact" { css.push_str(".browser .tab button { padding: 2px 4px; min-height: 22px; } .browser .tab-strip { padding: 2px; }"); }
-        if !settings.accent.is_empty() { css.push_str(&format!(".browser .tab.active {{ border-color: {}; }} .browser progressbar progress {{ background: {}; }}", settings.accent, settings.accent)); }
+        if settings.density == "Compact" {
+            css.push_str(".browser .tab button { padding: 2px 4px; min-height: 22px; } .browser .tab-strip { padding: 2px; }");
+        }
+        if !settings.accent.is_empty() {
+            css.push_str(&format!(".browser .tab.active {{ border-color: {}; }} .browser progressbar progress {{ background: {}; }}", settings.accent, settings.accent));
+        }
         self.personal_css.load_from_data(&css);
         clear(&self.personal_toolbar);
         for action in settings.toolbar_actions {
             let button = gtk::Button::with_label(&action);
             let weak = Rc::downgrade(self);
-            button.connect_clicked(move |_| { if let Some(b) = weak.upgrade() { b.command(&action); } });
+            button.connect_clicked(move |_| {
+                if let Some(b) = weak.upgrade() {
+                    b.command(&action);
+                }
+            });
             self.personal_toolbar.append(&button);
         }
     }
@@ -716,7 +747,11 @@ impl Browser {
     }
     pub fn new_tab(self: &Rc<Self>, uri: &str, private: bool, select: bool) -> Rc<Tab> {
         let custom_url = self.state.borrow().settings.new_tab_url.clone();
-        let uri = if uri == "about:blank" && !private && !self.safe_mode && !custom_url.is_empty() { custom_url.as_str() } else { uri };
+        let uri = if uri == "about:blank" && !private && !self.safe_mode && !custom_url.is_empty() {
+            custom_url.as_str()
+        } else {
+            uri
+        };
         let id = self.next.get();
         self.next.set(id + 1);
         let holder = gtk::Box::new(gtk::Orientation::Vertical, 0);
@@ -1381,4 +1416,3 @@ impl Browser {
         button.set_menu_model(Some(&menu));
     }
 }
-

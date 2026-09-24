@@ -579,7 +579,6 @@ dependencies = [
 name = "nagi"
 version = "0.0.2"
 dependencies = [
- "cairo-rs",
  "gtk4",
  "serde",
  "serde_json",
