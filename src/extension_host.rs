@@ -16,6 +16,9 @@ impl Browser {
         if self.safe_mode {
             return;
         }
+        let fingerprint = extensions::fingerprint();
+        if fingerprint == *self.extension_fingerprint.borrow() { return; }
+        *self.extension_fingerprint.borrow_mut() = fingerprint;
         let enabled: Vec<_> = extensions::list()
             .into_iter()
             .filter_map(Result::ok)
@@ -258,8 +261,11 @@ impl Browser {
             request.deny();
             true
         });
-        view.connect_create(|_, _| None);
-        view.connect_decide_policy(|_, decision, _| {
+        view.connect_decide_policy(|_, decision, kind| {
+            if kind == webkit::PolicyDecisionType::NewWindowAction {
+                decision.ignore();
+                return true;
+            }
             if let Some(nav) = decision.downcast_ref::<webkit::NavigationPolicyDecision>() {
                 let uri = nav
                     .navigation_action()
@@ -307,7 +313,7 @@ impl Browser {
             if view.parent().is_none() || b.closing.get() {
                 return glib::ControlFlow::Break;
             }
-            if !extensions::load(&id).is_ok_and(|e| e.enabled) {
+            if !b.extensions.borrow().iter().any(|e| e.manifest.id == id) {
                 return glib::ControlFlow::Break;
             }
             if heartbeat.get().elapsed() > Duration::from_secs(3) {

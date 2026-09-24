@@ -10,7 +10,7 @@ pub const APP_NAME: &str = "Nagi";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub search: String,
     pub restore: bool,
