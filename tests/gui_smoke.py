@@ -19,14 +19,26 @@ requests=[]
 class Fixture(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         requests.append(self.path)
+        if self.path=='/login/start':
+            self.send_response(302);self.send_header('Location','/login/finish')
+            self.send_header('Content-Length','0');self.end_headers();return
+        if self.path=='/login/session':
+            body=b'ok' if 'nagi-login=ok' in self.headers.get('Cookie','') else b'missing cookie'
+            if body==b'ok':requests.append('/session-authenticated')
+            self.send_response(200 if body==b'ok' else 403);self.send_header('Content-Type','text/plain')
+            self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body);return
         if self.path=='/favicon.png':
             body=favicon.getvalue();self.send_response(200);self.send_header('Content-Type','image/png')
+        elif self.path=='/login/finish':
+            body=b'<title>Signed in</title><script>fetch("/login/session")</script>'
+            self.send_response(200);self.send_header('Set-Cookie','nagi-login=ok; HttpOnly; SameSite=Lax; Path=/')
+            self.send_header('Content-Type','text/html; charset=utf-8')
         elif self.path=='/download':
             body=b'Nagi download fixture.\n';self.send_response(200);self.send_header('Content-Type','application/octet-stream');self.send_header('Content-Disposition','attachment; filename="nagi-test.txt"')
         else:
             body=(ROOT/'tests/fixture.html').read_bytes() if self.path!='/second' else b'<title>Second page</title><h1>Second page</h1>'
             body=b'<link rel="icon" type="image/png" href="/favicon.png">'+body
-            body+=b'<script>document.addEventListener("keydown",e=>{if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
+            body+=b'<script>document.addEventListener("focusin",e=>{if(e.target.id==="nagi-second")fetch("/second-focus")});document.addEventListener("keydown",e=>{if(e.key==="Tab"&&e.target.id==="nagi-first")fetch("/tab-check");if(e.key==="F8"){e.preventDefault();fetch("/focus-check")}})</script>'
             self.send_response(200);self.send_header('Content-Type','text/html; charset=utf-8')
         self.send_header('Content-Length',str(len(body)));self.end_headers();self.wfile.write(body)
     def log_message(self,*args):pass
@@ -58,7 +70,26 @@ try:
         count=requests.count('/focus-check');key('F8')
         wait_for(lambda:requests.count('/focus-check')>count)
     assert_page_focus()
+    # A Tab keystroke inside page input belongs to the web form.
+    xd('mousemove','--window',window,'280','680');xd('click','1')
+    key('Tab');key('Tab')
+    wait_for(lambda:'/tab-check' in requests and '/second-focus' in requests)
+    assert len(xd('search','--onlyvisible','--name','Nagi').splitlines())==1
+    assert_page_focus()
     wait_for(lambda:'/favicon.png' in requests)
+    command=[str(BINARY),'config']
+    config_get=lambda key:subprocess.check_output(command+['get',key],env=env,text=True).strip()
+    subprocess.run(command+['set','tabs.layout','Left'],env=env,check=True,capture_output=True)
+    wait_for(lambda:state()['settings']['tab_layout']=='Left')
+    subprocess.run(['import','-window',window,str(OUT/'nagi-vertical-tabs.png')],check=True,env=env)
+    assert config_get('tabs.layout')=='"Left"'
+    subprocess.run(command+['set','shortcuts.search','<Control><Alt>p'],env=env,check=True,capture_output=True)
+    wait_for(lambda:state()['settings']['shortcuts'].get('search')=='<Control><Alt>p')
+    key('ctrl+alt+p');xd('type','--clearmodifiers','agent configured search');key('Escape')
+    assert_page_focus()
+    subprocess.run(command+['set','shortcuts.search','default'],env=env,check=True,capture_output=True)
+    subprocess.run(command+['set','tabs.layout','Top'],env=env,check=True,capture_output=True)
+    wait_for(lambda:state()['settings']['tab_layout']=='Top')
     key('ctrl+alt+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-address.png')],check=True,env=env)
     xd('type','--clearmodifiers','--delay','40','quiet places to read');time.sleep(.4)
@@ -81,6 +112,8 @@ try:
     xd('windowsize',window,'520','600');time.sleep(.4);key('ctrl+l')
     subprocess.run(['import','-window',window,str(OUT/'nagi-floating-narrow.png')],check=True,env=env)
     key('Escape');assert_page_focus();xd('windowsize',window,'1180','800');time.sleep(.4)
+    navigate(url+'login/start')
+    wait_for(lambda:'/session-authenticated' in requests)
     navigate(url);wait_for(lambda:requests.count('/')>=2)
     key('ctrl+d');wait_for(lambda:any(v['url']==url for v in state()['bookmarks']))
     key('ctrl+f');xd('type','quiet-water');key('Escape')
@@ -136,7 +169,7 @@ try:
     key('Escape');navigate(url+'reduced-motion');wait_for(lambda:'/reduced-motion' in requests)
     key('ctrl+alt+l');key('Escape');assert_page_focus()
     key('ctrl+q');p.wait(timeout=15);assert p.returncode==0
-    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local tab and history suggestions via keyboard','favicon loaded and retained across same-site navigation (pixel check)','window dimensions restored after restart','composer with GTK animations disabled','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
+    result={'result':'pass','backend':'GTK X11 / Xvfb','checks':['local redirect and login cookie round trip','web form Tab and isolated app shortcuts','live agent CLI vertical tabs and remapped shortcut','local tab and history suggestions via keyboard','favicon loaded and retained across same-site navigation (pixel check)','window dimensions restored after restart','composer with GTK animations disabled','floating bar via Ctrl+Alt+L and Ctrl+L','Escape and outside-click dismissal with web focus restored','single-instance --focus-address without extra tab','narrow floating bar capture','HTTP page render','bookmark save','find action','reader round trip','private state exclusion','tab close/reopen','session save/reopen','download through native save dialog'],'profile':profile.name}
     (OUT/'gui-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
 finally:
     subprocess.run(['import','-window','root',str(OUT/'last-screen.png')],env=env)

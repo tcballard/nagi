@@ -1,4 +1,4 @@
-use crate::{core::*, storage, theme};
+use crate::{config, core::*, storage, theme};
 use gtk::{gio, glib, prelude::*};
 use std::{
     cell::{Cell, RefCell},
@@ -37,6 +37,11 @@ pub struct Browser {
     pub closed: RefCell<Vec<Page>>,
     pub stack: gtk::Stack,
     pub strip: gtk::Box,
+    tab_sidebar: gtk::Box,
+    top_scroller: gtk::ScrolledWindow,
+    side_scroller: gtk::ScrolledWindow,
+    app: gtk::Application,
+    settings_snapshot: RefCell<Settings>,
     pub chrome: gtk::Box,
     root: gtk::Box,
     address_layer: gtk::Overlay,
@@ -89,9 +94,17 @@ pub fn clear(b: &gtk::Box) {
 impl Browser {
     pub fn new(app: &gtk::Application) -> Rc<Self> {
         let path = state_dir().join("state.json");
-        let (state, error) = match storage::read(&path) {
+        let (mut state, error) = match storage::read(&path) {
             Ok(s) => (s, None),
             Err(e) => (State::default(), Some(e)),
+        };
+        let config_error = match config::read() {
+            Ok(Some(settings)) => {
+                state.settings = settings;
+                None
+            }
+            Ok(None) => None,
+            Err(e) => Some(e),
         };
         let saved = state.tabs.clone();
         let selected = state.active;
@@ -134,6 +147,16 @@ impl Browser {
             .child(&strip)
             .build();
         strip_line.append(&scroller);
+        let side_scroller = gtk::ScrolledWindow::builder()
+            .hscrollbar_policy(gtk::PolicyType::Never)
+            .vscrollbar_policy(gtk::PolicyType::Automatic)
+            .vexpand(true)
+            .build();
+        let tab_sidebar = gtk::Box::new(gtk::Orientation::Vertical, 4);
+        tab_sidebar.add_css_class("tab-sidebar");
+        tab_sidebar.set_size_request(210, -1);
+        tab_sidebar.append(&side_scroller);
+        tab_sidebar.set_visible(false);
         let plus = icon("list-add-symbolic", "New tab · Ctrl+T");
         strip_line.append(&plus);
         let tabs_button = icon("view-list-symbolic", "Search tabs · Ctrl+K");
@@ -243,6 +266,7 @@ impl Browser {
         let stack = gtk::Stack::new();
         stack.set_hexpand(true);
         stack.set_vexpand(true);
+        body.append(&tab_sidebar);
         body.append(&stack);
         let panel = gtk::Box::new(gtk::Orientation::Vertical, 12);
         panel.add_css_class("panel");
@@ -266,6 +290,7 @@ impl Browser {
             &css,
             gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
         );
+        let settings_snapshot = state.settings.clone();
         let b = Rc::new(Self {
             window,
             state: RefCell::new(state),
@@ -276,6 +301,11 @@ impl Browser {
             closed: RefCell::new(vec![]),
             stack,
             strip,
+            tab_sidebar,
+            top_scroller: scroller,
+            side_scroller,
+            app: app.clone(),
+            settings_snapshot: RefCell::new(settings_snapshot),
             chrome,
             root,
             address_layer,
@@ -359,6 +389,7 @@ impl Browser {
             });
         }
         b.actions(app);
+        b.apply_tab_layout();
         b.menu(&menu);
         b.apply_appearance();
         b.setup_downloads(&b.session);
@@ -468,6 +499,30 @@ impl Browser {
             if b.closing.get() {
                 return glib::ControlFlow::Break;
             }
+            if let Ok(Some(settings)) = config::read() {
+                if settings != *b.settings_snapshot.borrow() {
+                    let old = b.state.borrow().settings.clone();
+                    b.state.borrow_mut().settings = settings.clone();
+                    *b.settings_snapshot.borrow_mut() = settings.clone();
+                    b.apply_tab_layout();
+                    b.apply_shortcuts();
+                    b.apply_appearance();
+                    if settings.block != old.block {
+                        b.compile_filter();
+                    }
+                    if settings.zoom != old.zoom {
+                        for t in b.tabs.borrow().iter() {
+                            if let Some(v) = t.view.borrow().as_ref() {
+                                v.set_zoom_level(settings.zoom);
+                            }
+                        }
+                    }
+                    if *b.panel_kind.borrow() == "Settings" && b.panel.is_visible() {
+                        b.show_panel("Settings");
+                    }
+                    b.dirty.set(true);
+                }
+            }
             if b.dirty.replace(false) {
                 b.save();
             }
@@ -500,12 +555,91 @@ impl Browser {
         if let Some(id) = id {
             b.select(id);
         }
+        if let Some(e) = config_error {
+            b.notice(&e);
+        }
         if let Some(error) = &b.storage_error {
             b.notice(&format!(
                 "{error} This session will not overwrite saved data."
             ));
         }
         b
+    }
+    pub fn persist_settings(&self) {
+        let settings = self.state.borrow().settings.clone();
+        match config::write(&settings) {
+            Ok(()) => *self.settings_snapshot.borrow_mut() = settings,
+            Err(e) => self.notice(&format!("Could not save settings: {e}")),
+        }
+        self.dirty.set(true);
+    }
+    pub fn set_preference(self: &Rc<Self>, key: &str, value: &str) -> Result<(), String> {
+        let mut next = self.state.borrow().settings.clone();
+        config::set(&mut next, key, value)?;
+        let previous = self.state.borrow().settings.clone();
+        config::write(&next)?;
+        self.state.borrow_mut().settings = next.clone();
+        *self.settings_snapshot.borrow_mut() = next.clone();
+        self.apply_tab_layout();
+        self.apply_shortcuts();
+        self.apply_appearance();
+        if next.block != previous.block {
+            self.compile_filter();
+        }
+        if next.zoom != previous.zoom {
+            for t in self.tabs.borrow().iter() {
+                if let Some(v) = t.view.borrow().as_ref() {
+                    v.set_zoom_level(next.zoom);
+                }
+            }
+        }
+        self.dirty.set(true);
+        Ok(())
+    }
+    pub fn apply_tab_layout(&self) {
+        let vertical = self.state.borrow().settings.tab_layout == "Left";
+        if vertical {
+            if self.side_scroller.child().as_ref() != Some(self.strip.upcast_ref()) {
+                self.top_scroller.set_child(None::<&gtk::Widget>);
+                self.strip.set_orientation(gtk::Orientation::Vertical);
+                self.side_scroller.set_child(Some(&self.strip));
+            }
+        } else if self.top_scroller.child().as_ref() != Some(self.strip.upcast_ref()) {
+            self.side_scroller.set_child(None::<&gtk::Widget>);
+            self.strip.set_orientation(gtk::Orientation::Horizontal);
+            self.top_scroller.set_child(Some(&self.strip));
+        }
+        self.top_scroller.set_visible(!vertical);
+        self.tab_sidebar.set_visible(vertical);
+        if vertical {
+            self.strip.add_css_class("vertical-tabs");
+        } else {
+            self.strip.remove_css_class("vertical-tabs");
+        }
+    }
+    pub fn apply_shortcuts(&self) {
+        for (action, fallback) in [
+            ("search", "<Control><Alt>l"),
+            ("address", "<Control>l"),
+            ("new", "<Control>t"),
+            ("tabs", "<Control>k"),
+            ("history", "<Control>h"),
+            ("bookmarks", "<Control>b"),
+            ("downloads", "<Control>j"),
+            ("find", "<Control>f"),
+            ("reload", "<Control>r"),
+        ] {
+            let accel = self
+                .state
+                .borrow()
+                .settings
+                .shortcuts
+                .get(action)
+                .cloned()
+                .unwrap_or_else(|| fallback.to_string());
+            self.app
+                .set_accels_for_action(&format!("win.{action}"), &[accel.as_str()]);
+        }
     }
     pub fn tab(&self) -> Option<Rc<Tab>> {
         self.tabs
@@ -618,11 +752,54 @@ impl Browser {
             }
         });
         tab.button.add_controller(click);
+        let drag = gtk::DragSource::new();
+        drag.set_actions(gtk::gdk::DragAction::MOVE);
+        drag.set_content(Some(&gtk::gdk::ContentProvider::for_value(
+            &format!("nagi-tab-{id}").to_value(),
+        )));
+        tab.button.add_controller(drag);
+        let drop = gtk::DropTarget::new(String::static_type(), gtk::gdk::DragAction::MOVE);
+        let weak = Rc::downgrade(self);
+        drop.connect_drop(move |_, value, _, _| {
+            let Some(b) = weak.upgrade() else {
+                return false;
+            };
+            let Ok(source) = value.get::<String>() else {
+                return false;
+            };
+            let Some(source) = source
+                .strip_prefix("nagi-tab-")
+                .and_then(|s| s.parse::<u64>().ok())
+            else {
+                return false;
+            };
+            b.move_tab(source, id)
+        });
+        tab.button.add_controller(drop);
         if select {
             self.select(id);
         }
         self.dirty.set(true);
         tab
+    }
+    pub fn move_tab(&self, source: u64, destination: u64) -> bool {
+        let mut tabs = self.tabs.borrow_mut();
+        let Some(from) = tabs.iter().position(|t| t.id == source) else {
+            return false;
+        };
+        let Some(to) = tabs.iter().position(|t| t.id == destination) else {
+            return false;
+        };
+        if from == to {
+            return true;
+        }
+        let moved = tabs.remove(from);
+        tabs.insert(to, moved.clone());
+        let preceding = to.checked_sub(1).map(|n| tabs[n].button.clone());
+        self.strip
+            .reorder_child_after(&moved.button, preceding.as_ref());
+        self.dirty.set(true);
+        true
     }
     pub fn select(self: &Rc<Self>, id: u64) {
         self.dismiss_address();
@@ -924,6 +1101,15 @@ impl Browser {
             ("back", vec!["<Alt>Left"]),
             ("forward", vec!["<Alt>Right"]),
             ("next", vec!["<Control>Tab"]),
+            ("tab-1", vec!["<Control>1"]),
+            ("tab-2", vec!["<Control>2"]),
+            ("tab-3", vec!["<Control>3"]),
+            ("tab-4", vec!["<Control>4"]),
+            ("tab-5", vec!["<Control>5"]),
+            ("tab-6", vec!["<Control>6"]),
+            ("tab-7", vec!["<Control>7"]),
+            ("tab-8", vec!["<Control>8"]),
+            ("tab-9", vec!["<Control>9"]),
             ("previous", vec!["<Control><Shift>Tab"]),
             ("reader", vec!["<Control><Shift>r"]),
             ("hide", vec!["<Control><Shift>h"]),
@@ -946,12 +1132,34 @@ impl Browser {
                 }
             });
             self.window.add_action(&action);
-            app.set_accels_for_action(&format!("win.{name}"), &keys);
+            let configured = self.state.borrow().settings.shortcuts.get(name).cloned();
+            if let Some(accel) = configured {
+                app.set_accels_for_action(&format!("win.{name}"), &[accel.as_str()]);
+            } else {
+                app.set_accels_for_action(&format!("win.{name}"), &keys);
+            }
         }
     }
     pub fn command(self: &Rc<Self>, name: &str) {
         if name != "address" && name != "search" && name != "escape" {
             self.dismiss_address();
+        }
+        if let Some(digit) = name
+            .strip_prefix("tab-")
+            .and_then(|s| s.parse::<usize>().ok())
+        {
+            let tabs = self.tabs.borrow();
+            let selected = if digit == 9 {
+                tabs.last()
+            } else {
+                tabs.get(digit - 1)
+            }
+            .map(|t| t.id);
+            drop(tabs);
+            if let Some(id) = selected {
+                self.select(id);
+            }
+            return;
         }
         match name {
             "new" => {

@@ -1,6 +1,8 @@
 mod browser;
+mod config;
 mod core;
 mod icons;
+mod import;
 mod panels;
 mod storage;
 mod suggestions;
@@ -10,12 +12,19 @@ use gtk::{gio, prelude::*};
 use std::{cell::RefCell, rc::Rc};
 fn main() -> gtk::glib::ExitCode {
     let args: Vec<String> = std::env::args().collect();
+    if args.get(1).is_some_and(|a| a == "config") {
+        return if config::cli(&args[2..]) == 0 {
+            gtk::glib::ExitCode::SUCCESS
+        } else {
+            gtk::glib::ExitCode::FAILURE
+        };
+    }
     if args.iter().any(|a| a == "--version") {
         println!("Nagi {}", core::VERSION);
         return gtk::glib::ExitCode::SUCCESS;
     }
     if args.iter().any(|a| a == "--help") {
-        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [URL ...]\n       nagi --version\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
+        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [URL ...]\n       nagi --version\n       nagi config get [key] | nagi config set KEY VALUE\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
         return gtk::glib::ExitCode::SUCCESS;
     }
     let app = gtk::Application::new(

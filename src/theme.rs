@@ -71,6 +71,9 @@ window.browser {{ background: {bg}; color: {fg}; }}
 .browser .suggestions row {{ padding: 9px 10px; border-radius: 8px; }}
 .browser .suggestions row:hover {{ background: alpha({fg},0.06); }}
 .browser .suggestions row:selected {{ background: alpha({accent},0.16); color: {fg}; }}
+.browser .tab-sidebar {{ background: {bg}; border-right: 1px solid alpha({fg},0.12); padding: 8px 5px; }}
+.browser .vertical-tabs .tab {{ margin: 2px 0; }}
+.browser .vertical-tabs .tab button:first-child {{ min-width: 160px; }}
 .browser .tab {{ border-radius: 9px; padding: 2px 3px; margin: 3px 0; }}
 .browser .tab.active {{ background: alpha({fg},0.10); }}
 .browser .tab.private {{ border-bottom: 2px solid {accent}; }}

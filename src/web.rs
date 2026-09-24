@@ -166,7 +166,20 @@ impl Browser {
         view.connect_mouse_target_changed(move |_, hit, _| {
             if let Some(b) = weak.upgrade() {
                 if b.active.get() == id {
-                    b.status.set_text(hit.link_uri().as_deref().unwrap_or(""));
+                    let uri = hit.link_uri();
+                    b.status.set_text(uri.as_deref().unwrap_or(""));
+                    if b.state.borrow().settings.link_previews {
+                        let label = hit.link_title().or_else(|| hit.link_label());
+                        let tooltip = uri.as_ref().map(|u| match label {
+                            Some(ref title) if !title.is_empty() => format!("{title}\n{u}"),
+                            _ => u.to_string(),
+                        });
+                        b.view()
+                            .as_ref()
+                            .map(|v| v.set_tooltip_text(tooltip.as_deref()));
+                    } else if let Some(v) = b.view() {
+                        v.set_tooltip_text(None);
+                    }
                 }
             }
         });
