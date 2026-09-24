@@ -5,6 +5,7 @@ mod core;
 mod icons;
 mod import;
 mod panels;
+mod personal;
 mod storage;
 mod suggestions;
 mod theme;
@@ -15,6 +16,9 @@ fn main() -> gtk::glib::ExitCode {
     let args: Vec<String> = std::env::args().collect();
     if args.get(1).is_some_and(|a| a == "config") {
         return gtk::glib::ExitCode::from(config::cli(&args[2..]) as u8);
+    }
+    if args.get(1).is_some_and(|a| a == "profile") {
+        return gtk::glib::ExitCode::from(personal::cli(&args[2..]) as u8);
     }
     if args.iter().any(|a| a == "--version") {
         println!("Nagi {}", core::VERSION);
@@ -34,6 +38,14 @@ fn main() -> gtk::glib::ExitCode {
         gtk::glib::OptionFlags::NONE,
         gtk::glib::OptionArg::None,
         "Present Nagi and summon the floating address bar",
+        None,
+    );
+    app.add_main_option(
+        "safe-mode",
+        0u8.into(),
+        gtk::glib::OptionFlags::NONE,
+        gtk::glib::OptionArg::None,
+        "Start with default settings and extensions/control disabled; no session writes",
         None,
     );
     app.add_main_option(
@@ -67,7 +79,13 @@ fn main() -> gtk::glib::ExitCode {
             .unwrap_or(false);
         let existing = slot.borrow().clone();
         let browser = existing.unwrap_or_else(|| {
-            let b = browser::Browser::new(app);
+            let safe = cmd
+                .options_dict()
+                .lookup::<bool>("safe-mode")
+                .ok()
+                .flatten()
+                .unwrap_or(false);
+            let b = browser::Browser::new(app, safe);
             *slot.borrow_mut() = Some(b.clone());
             b
         });

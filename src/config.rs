@@ -37,6 +37,11 @@ pub fn schema() -> serde_json::Value {
         "restore_tabs":{"type":"boolean","default":true},
         "block_trackers":{"type":"boolean","default":true},
         "zoom":{"type":"number","minimum":0.5,"maximum":2.0,"default":1.0},
+        "layout.density":{"type":"string","enum":["Comfortable","Compact"],"default":"Comfortable"},
+        "tabs.sidebar_width":{"type":"integer","minimum":140,"maximum":420,"default":210},
+        "appearance.accent":{"type":"string","format":"empty or #RRGGBB","default":""},
+        "new_tab.url":{"type":"string","format":"empty or HTTP(S) URL","default":""},
+        "toolbar.actions":{"type":"array","items":TOOLBAR_ACTIONS,"default":[]},
         "shortcuts":{"actions":OVERRIDES,"reset":"default"}
     }})
 }
@@ -53,7 +58,40 @@ pub const OVERRIDES: &[&str] = &[
     "reload",
 ];
 
+pub const TOOLBAR_ACTIONS: &[&str] = &[
+    "back",
+    "forward",
+    "reload",
+    "bookmarks",
+    "history",
+    "downloads",
+    "reader",
+    "settings",
+];
 pub fn validate(s: &Settings) -> Result<(), String> {
+    if !["Comfortable", "Compact"].contains(&s.density.as_str()) {
+        return Err("layout.density must be Comfortable or Compact".into());
+    }
+    if !(140..=420).contains(&s.sidebar_width) {
+        return Err("Sidebar width must be 140–420".into());
+    }
+    if !s.accent.is_empty()
+        && !(s.accent.len() == 7
+            && s.accent.starts_with('#')
+            && s.accent[1..].bytes().all(|b| b.is_ascii_hexdigit()))
+    {
+        return Err("Accent must be empty or #RRGGBB".into());
+    }
+    if !s.new_tab_url.is_empty() {
+        crate::personal::http_url(&s.new_tab_url)?;
+    }
+    if s.toolbar_actions.len() > 8
+        || s.toolbar_actions
+            .iter()
+            .any(|a| !TOOLBAR_ACTIONS.contains(&a.as_str()))
+    {
+        return Err("Invalid toolbar actions".into());
+    }
     if !["Top", "Left"].contains(&s.tab_layout.as_str()) {
         return Err("tabs.layout must be Top or Left".into());
     }
@@ -169,6 +207,15 @@ fn canonical_shortcut(accel: &str) -> Result<String, String> {
 pub fn set(s: &mut Settings, key: &str, value: &str) -> Result<(), String> {
     let mut next = s.clone();
     match key {
+        "layout.density" => next.density = value.into(),
+        "tabs.sidebar_width" => {
+            next.sidebar_width = value.parse().map_err(|_| "Invalid sidebar width")?
+        }
+        "appearance.accent" => next.accent = value.into(),
+        "new_tab.url" => next.new_tab_url = value.into(),
+        "toolbar.actions" => {
+            next.toolbar_actions = serde_json::from_str(value).map_err(|e| e.to_string())?
+        }
         "tabs.layout" => next.tab_layout = value.into(),
         "features.link_previews" => next.link_previews = parse_bool(value)?,
         "search.engine" => next.search = value.into(),
@@ -227,6 +274,11 @@ fn run(args: &[String]) -> Result<serde_json::Value, String> {
     if args.first().is_some_and(|a| a == "get") && args.len() == 2 {
         let json = serde_json::to_value(&initial.settings).unwrap();
         let key = match args[1].as_str() {
+            "layout.density" => "density",
+            "tabs.sidebar_width" => "sidebar_width",
+            "appearance.accent" => "accent",
+            "new_tab.url" => "new_tab_url",
+            "toolbar.actions" => "toolbar_actions",
             "tabs.layout" => "tab_layout",
             "features.link_previews" => "link_previews",
             "search.engine" => "search",
