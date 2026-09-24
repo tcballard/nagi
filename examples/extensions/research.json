@@ -1,0 +1,15 @@
+{
+  "api": 1,
+  "id": "research",
+  "name": "Research desk",
+  "description": "A personal reading layout, offline sidebar and quiet new-tab page.",
+  "commands": [
+    {"id": "reading-layout", "label": "Use my reading layout", "action": {"kind": "configure", "changes": {"tabs.layout": "Left", "layout.density": "Compact", "tabs.sidebar_width": 240, "toolbar.actions": ["back", "forward", "bookmarks", "reader"]}}},
+    {"id": "show-notes", "label": "Open research sidebar", "action": {"kind": "sidebar"}},
+    {"id": "open-reference", "label": "Open Wikipedia", "action": {"kind": "open", "url": "https://en.wikipedia.org/"}}
+  ],
+  "sidebar_html": "<style>body{background:#191d22;color:#e5e8e2;font:16px sans-serif;padding:16px}textarea{width:90%;height:240px;background:#252b31;color:inherit;border:1px solid #b4dc81;padding:8px}</style><h2>Research desk</h2><p>What are you trying to find out?</p><textarea aria-label='Working notes'></textarea><p>Temporary notes. Copy these before closing the panel.</p>",
+  "new_tab_html": "<style>body{background:#191d22;color:#e5e8e2;font:22px sans-serif;display:grid;place-content:center;height:90vh}</style><h1>One question at a time.</h1><p>Ctrl+L to start your research.</p>",
+  "sites": [],
+  "events": []
+}

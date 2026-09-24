@@ -4,6 +4,8 @@ mod config_store;
 mod control;
 mod control_transport;
 mod core;
+mod extension_host;
+mod extensions;
 mod icons;
 mod import;
 mod panels;
@@ -19,6 +21,9 @@ fn main() -> gtk::glib::ExitCode {
     if args.get(1).is_some_and(|a| a == "config") {
         return gtk::glib::ExitCode::from(config::cli(&args[2..]) as u8);
     }
+    if args.get(1).is_some_and(|a| a == "extension") {
+        return gtk::glib::ExitCode::from(extensions::cli(&args[2..]) as u8);
+    }
     if args.get(1).is_some_and(|a| a == "browser") {
         return gtk::glib::ExitCode::from(control_transport::cli(&args[2..]) as u8);
     }
@@ -30,7 +35,7 @@ fn main() -> gtk::glib::ExitCode {
         return gtk::glib::ExitCode::SUCCESS;
     }
     if args.iter().any(|a| a == "--help") {
-        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [URL ...]\n       nagi --version\n       nagi config get [key] | nagi config set KEY VALUE\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
+        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [--agent-control] [--safe-mode] [--extensions] [URL ...]\n       nagi --version\n       nagi config schema | inspect | get [key] | set KEY VALUE | apply JSON | undo\n       nagi profile export NAME | check | apply\n       nagi browser METHOD [JSON_PARAMS] [REQUEST_ID]\n       nagi extension schema | list | check | install | disable ID\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
         return gtk::glib::ExitCode::SUCCESS;
     }
     let app = gtk::Application::new(
@@ -43,6 +48,14 @@ fn main() -> gtk::glib::ExitCode {
         gtk::glib::OptionFlags::NONE,
         gtk::glib::OptionArg::None,
         "Present Nagi and summon the floating address bar",
+        None,
+    );
+    app.add_main_option(
+        "extensions",
+        0u8.into(),
+        gtk::glib::OptionFlags::NONE,
+        gtk::glib::OptionArg::None,
+        "Open installed extensions",
         None,
     );
     app.add_main_option(
@@ -127,6 +140,15 @@ fn main() -> gtk::glib::ExitCode {
             }
         }
         browser.window.present();
+        if cmd
+            .options_dict()
+            .lookup::<bool>("extensions")
+            .ok()
+            .flatten()
+            .unwrap_or(false)
+        {
+            browser.show_extensions();
+        }
         if focus_address {
             browser.show_search();
         }

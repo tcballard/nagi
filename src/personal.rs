@@ -11,6 +11,9 @@ pub struct Profile {
     pub settings: Settings,
 }
 pub fn http_url(value: &str) -> Result<(), String> {
+    if value.len() > 8192 {
+        return Err("URL exceeds 8192 bytes".into());
+    }
     let url = url::Url::parse(value).map_err(|_| "Expected an absolute HTTP(S) URL")?;
     if !["http", "https"].contains(&url.scheme())
         || url.host_str().is_none()

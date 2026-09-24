@@ -10,7 +10,7 @@ pub const APP_NAME: &str = "Nagi";
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq)]
-#[serde(default)]
+#[serde(default, deny_unknown_fields)]
 pub struct Settings {
     pub search: String,
     pub restore: bool,
@@ -24,6 +24,7 @@ pub struct Settings {
     pub sidebar_width: i32,
     pub accent: String,
     pub new_tab_url: String,
+    pub new_tab_extension: String,
     pub toolbar_actions: Vec<String>,
 }
 impl Default for Settings {
@@ -41,6 +42,7 @@ impl Default for Settings {
             sidebar_width: 210,
             accent: String::new(),
             new_tab_url: String::new(),
+            new_tab_extension: String::new(),
             toolbar_actions: vec![],
         }
     }

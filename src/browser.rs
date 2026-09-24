@@ -32,6 +32,10 @@ pub struct Browser {
     pub window: gtk::ApplicationWindow,
     pub safe_mode: bool,
     pub control: RefCell<crate::control::Control>,
+    pub extensions: RefCell<Vec<crate::extensions::Installed>>,
+    pub extension_fingerprint:
+        RefCell<Vec<(std::path::PathBuf, Option<std::time::SystemTime>, u64)>>,
+    pub extension_views: RefCell<Vec<(String, glib::WeakRef<webkit::WebView>)>>,
     pub control_bar: gtk::Box,
     personal_css: gtk::CssProvider,
     personal_toolbar: gtk::Box,
@@ -323,6 +327,9 @@ impl Browser {
             window,
             safe_mode,
             control: RefCell::new(crate::control::Control::default()),
+            extensions: RefCell::new(vec![]),
+            extension_fingerprint: RefCell::new(vec![]),
+            extension_views: RefCell::new(vec![]),
             control_bar,
             personal_css,
             personal_toolbar,
@@ -568,6 +575,7 @@ impl Browser {
                     b.dirty.set(true);
                 }
             }
+            b.refresh_extensions();
             if b.dirty.replace(false) {
                 b.save();
             }
@@ -585,6 +593,7 @@ impl Browser {
             glib::ControlFlow::Continue
         });
         b.apply_personalisation();
+        b.refresh_extensions();
         if restore {
             for page in saved {
                 let tab = b.new_tab(&page.url, false, false);
@@ -1013,6 +1022,17 @@ impl Browser {
         }
     }
     pub fn welcome(self: &Rc<Self>, tab: &Rc<Tab>) {
+        if !self.safe_mode && !tab.private {
+            let id = self.state.borrow().settings.new_tab_extension.clone();
+            if let Ok(extension) = crate::extensions::load(&id) {
+                if extension.enabled && !extension.manifest.new_tab_html.is_empty() {
+                    clear(&tab.holder);
+                    let view = self.extension_view(&extension, &extension.manifest.new_tab_html);
+                    tab.holder.append(&view);
+                    return;
+                }
+            }
+        }
         clear(&tab.holder);
         let area = gtk::Box::new(gtk::Orientation::Vertical, 16);
         area.add_css_class("welcome");
@@ -1172,6 +1192,7 @@ impl Browser {
             ("downloads", vec!["<Control>j"]),
             ("bookmark", vec!["<Control>d"]),
             ("settings", vec!["<Control>comma"]),
+            ("extensions", vec![]),
             ("find", vec!["<Control>f"]),
             ("reload", vec!["<Control>r", "F5"]),
             ("back", vec!["<Alt>Left"]),
@@ -1266,6 +1287,7 @@ impl Browser {
             "bookmarks" => self.show_panel("Bookmarks"),
             "downloads" => self.show_panel("Downloads"),
             "settings" => self.show_panel("Settings"),
+            "extensions" => self.show_extensions(),
             "about" => self.show_panel("About"),
             "bookmark" => self.bookmark(),
             "find" => {
@@ -1403,6 +1425,7 @@ impl Browser {
             ],
             vec![
                 ("Settings", "settings"),
+                ("Extensions", "extensions"),
                 ("About Nagi", "about"),
                 ("Quit", "quit"),
             ],

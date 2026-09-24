@@ -40,6 +40,7 @@ pub fn schema() -> serde_json::Value {
         "layout.density":{"type":"string","enum":["Comfortable","Compact"],"default":"Comfortable"},
         "tabs.sidebar_width":{"type":"integer","minimum":140,"maximum":420,"default":210},
         "appearance.accent":{"type":"string","format":"empty or #RRGGBB","default":""},
+        "new_tab.extension":{"type":"string","format":"installed extension ID or empty","default":""},
         "new_tab.url":{"type":"string","format":"empty or HTTP(S) URL","default":""},
         "toolbar.actions":{"type":"array","items":TOOLBAR_ACTIONS,"default":[]},
         "shortcuts":{"actions":OVERRIDES,"reset":"default"}
@@ -69,6 +70,9 @@ pub const TOOLBAR_ACTIONS: &[&str] = &[
     "settings",
 ];
 pub fn validate(s: &Settings) -> Result<(), String> {
+    if !s.new_tab_extension.is_empty() && !crate::extensions::valid_id(&s.new_tab_extension) {
+        return Err("Invalid new-tab extension ID".into());
+    }
     if !["Comfortable", "Compact"].contains(&s.density.as_str()) {
         return Err("layout.density must be Comfortable or Compact".into());
     }
@@ -213,6 +217,7 @@ pub fn set(s: &mut Settings, key: &str, value: &str) -> Result<(), String> {
         }
         "appearance.accent" => next.accent = value.into(),
         "new_tab.url" => next.new_tab_url = value.into(),
+        "new_tab.extension" => next.new_tab_extension = value.into(),
         "toolbar.actions" => {
             next.toolbar_actions = serde_json::from_str(value).map_err(|e| e.to_string())?
         }
@@ -274,6 +279,7 @@ fn run(args: &[String]) -> Result<serde_json::Value, String> {
     if args.first().is_some_and(|a| a == "get") && args.len() == 2 {
         let json = serde_json::to_value(&initial.settings).unwrap();
         let key = match args[1].as_str() {
+            "new_tab.extension" => "new_tab_extension",
             "layout.density" => "density",
             "tabs.sidebar_width" => "sidebar_width",
             "appearance.accent" => "accent",

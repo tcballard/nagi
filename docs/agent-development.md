@@ -29,12 +29,12 @@ Older binaries cannot interpret the new envelope. Before a binary downgrade,
 export `nagi config get` to a backup and restore that flat JSON as settings.json
 while the browser is closed. Uninstall continues to preserve browsing data.
 
-## Planned dependent PRs
+## Dependent PR sequence
 
-2. Versioned personalisation: profiles, appearance/layout preferences and safe mode.
-3. Local CLI control: scoped session access, tabs, page observations/actions,
+2. [PR #5](https://github.com/tcballard/nagi/pull/5), versioned personalisation: profiles, appearance/layout preferences and safe mode.
+3. [PR #6](https://github.com/tcballard/nagi/pull/6), local CLI control: scoped session access, tabs, page observations/actions,
    events, cancellation, visible control state and stop.
-4. Isolated extension hooks: commands, sidebars, new tabs, navigation/download
+4. [PR #7](https://github.com/tcballard/nagi/pull/7), isolated extension hooks: commands, sidebars, new tabs, navigation/download
    events and site styles/scripts, with explicit grants and bounded execution.
 
 ## Evidence
@@ -104,7 +104,7 @@ input operation does not prove completion of a website transaction. Observe
 again to verify. `wait` waits for the current load, not future SPA network work.
 Snapshots invalidate old element references. Navigation invalidates observations.
 Page content is explicitly untrusted. No arbitrary JavaScript evaluation API.
-Password/payment/OTP/file inputs require manual entry. Cross-origin frames and
+Password and file inputs, plus fields marked as payment/OTP/password by autocomplete, require manual entry. Cross-origin frames and
 closed shadow roots are not exposed; synthetic input may not work on all sites.
 
 Requests are bounded to 64 KiB, 16 connections, 15 seconds and 10,000 IDs per
@@ -112,3 +112,53 @@ session. Events retain the last 512 entries and no page contents. Cancellation
 stops pending work; it cannot undo already completed website actions. The
 visible Stop button revokes all access and closes the socket. Restart Nagi to
 enable another control session. Downloads continue to use native save prompts.
+
+## 4. Personal extensions
+
+`nagi extension schema` describes the API. Install the bundled example with
+`nagi extension install < examples/extensions/research.json`. Installation
+validates and stores code in `~/.config/nagi/extensions/`; it does not enable it.
+Open `nagi --extensions`, review the access description and enable the extension.
+`nagi extension list` reports IDs, hashes and current approval. `disable ID`
+revokes it. Changing installed content invalidates approval. Never edit grants
+as a substitute for owner approval.
+
+Manifests (API 1) register up to 16 named commands: open an HTTP(S) URL, show
+an offline sidebar, or apply a validated settings batch. The Extensions panel
+runs these commands; an enabled control session also provides
+`nagi browser extension.commands` and
+`nagi browser extension.run '{"extension":"research","command":"reading-layout"}'`.
+
+Sidebar/new-tab HTML uses an ephemeral WebKit view with restrictive CSP: no
+network, remote frames, form submission, native filesystem or shell bridge.
+JavaScript can manipulate the panel DOM. Storage is temporary; the example
+explicitly warns that notes must be copied before closing. Select a provider
+with `nagi config set new_tab.extension research`; keep `new_tab.url` empty.
+Private tabs never use extensions. A hung panel is terminated and disabled
+by a three-second responsiveness watchdog; the native browser stays available.
+
+Site hooks contain exact `origin`, optional `css`, and optional `script`.
+They run after navigation in an isolated JavaScript world, only on approved
+normal-tab origins. This isolates JavaScript globals, not DOM effects or
+network activity: site scripts/styles are powerful and may interact with
+signed-in pages. Review that access before approving. No privileged host API
+is exposed. A failing/unresponsive extension is disabled. Revocation stops
+affected renderer pages to end lingering timers; reload to resume without it.
+Already completed website effects cannot be undone by disabling an extension.
+
+Event hooks support `navigation.finished` and successful `download.finished`
+for exact origins, delivering bounded plain-text notices. Commands are invoked
+explicitly, preventing event-triggered navigation/configuration loops. Agent
+navigation/download events are also available through the control event cursor.
+
+Personal code lives outside the installed package. Package upgrades preserve
+it; incompatible API versions and changed hashes remain disabled. The manifest
+and example are the v1 contract; future capabilities require an explicit API
+revision and migration. No general-purpose native plugin loader is included.
+
+
+Additional recovery checks: `python3 tests/personal_recovery.py` verifies legacy
+settings migration, profile round trips, unsupported fields/schemas, held locks
+and killed writer processes. `tests/extensions_smoke.py` exercises native
+approval, sidebar CSP, site hooks, revocation, a hung extension and safe startup
+under GTK/Xvfb. These are portable CI checks, not a live Omarchy claim.

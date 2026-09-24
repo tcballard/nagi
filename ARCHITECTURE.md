@@ -33,7 +33,27 @@ atomic directory replacements are detected. Invalid input retains the last good
 palette; startup without a theme uses the built-in dark palette. GTK owns fonts,
 keyboard input, accessibility and file dialog portal routing.
 
-Configuration and resumable local records currently share a versioned state file
-in XDG_STATE_HOME/nagi/state.json. Persistent website data lives in
+Resumable browser records live in XDG_STATE_HOME/nagi/state.json. Configuration
+uses a separate versioned settings.json transaction envelope. CLI and GTK share
+validation, advisory locking, revision checks and atomic replacement. Profiles
+export preferences without browsing records. Safe startup bypasses customisation
+and does not write session/settings data. Persistent website data lives in
 XDG_DATA_HOME/nagi/web; disposable engine/filter caches in XDG_CACHE_HOME/nagi.
 Relative XDG values are ignored. There is no autostart, service or global keybind.
+
+
+
+`control_transport.rs` owns the bounded local Unix socket and connection workers;
+GTK receives typed requests and is the only owner that touches WebViews.
+`control.rs` owns session grants, shared normal tabs, deadlines/cancellation,
+request IDs and bounded events. Page observations/actions run in a retained
+isolated world. Navigation generations prevent old results being accepted.
+Stop revokes permissions, cancels requests and joins transport workers.
+
+`extensions.rs` validates the v1 user-owned manifest and content-bound approvals.
+`extension_host.rs` owns native consent, declarative command dispatch and
+WebKit extension surfaces. Panels use ephemeral storage and restrictive CSP,
+without a privileged host bridge. Site hooks have explicit exact-origin access.
+A watchdog stops unresponsive extension renderers; revocation stops affected
+pages to terminate lingering code. Core package updates do not rewrite personal
+manifests. Private tabs and safe mode exclude all personal extension execution.

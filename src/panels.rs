@@ -261,6 +261,11 @@ impl Browser {
                         settings.new_tab_url,
                     ),
                     (
+                        "new_tab.extension",
+                        "New-tab extension ID, or empty for Nagi",
+                        settings.new_tab_extension,
+                    ),
+                    (
                         "toolbar.actions",
                         "Toolbar actions: JSON list",
                         serde_json::to_string(&settings.toolbar_actions).unwrap(),
