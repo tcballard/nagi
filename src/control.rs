@@ -3,6 +3,7 @@ use crate::{
     browser::{Browser, Tab},
     control_transport::{self as transport, Incoming, Server},
     core::origin,
+    extensions::Action,
 };
 use gtk::{gio, glib, prelude::*};
 use serde_json::{json, Value};
@@ -286,7 +287,7 @@ impl Browser {
                     .into_iter()
                     .filter_map(Result::ok)
                     .filter(|e| e.enabled)
-                    .map(|e| json!({"extension":e.manifest.id,"commands":e.manifest.commands}))
+                    .map(|e| json!({"extension":e.manifest.id,"commands":e.manifest.commands.into_iter().filter(|c| !matches!(&c.action, Action::Configure { .. })).collect::<Vec<_>>()}))
                     .collect::<Vec<_>>()))),
                 "extension.run" => {
                     self.extension_command(

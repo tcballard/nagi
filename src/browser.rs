@@ -627,8 +627,36 @@ impl Browser {
         if self.safe_mode {
             return Err("Settings are read-only in safe mode".into());
         }
-        let previous = self.state.borrow().settings.clone();
         let next = config::change(key, value)?;
+        self.apply_settings(next);
+        Ok(())
+    }
+    pub fn undo_last_preference(self: &Rc<Self>) -> Result<(), String> {
+        if self.safe_mode {
+            return Err("Settings are read-only in safe mode".into());
+        }
+        let current = config::document()?;
+        let previous = current
+            .history
+            .last()
+            .ok_or("No settings change to undo")?
+            .settings
+            .clone();
+        let restored = crate::config_store::transact(
+            &config::path(),
+            &current.settings,
+            Some(current.revision),
+            false,
+            |d| {
+                d.settings = previous;
+                Ok(())
+            },
+        )?;
+        self.apply_settings(restored.settings);
+        Ok(())
+    }
+    fn apply_settings(self: &Rc<Self>, next: Settings) {
+        let previous = self.state.borrow().settings.clone();
         self.state.borrow_mut().settings = next.clone();
         *self.settings_snapshot.borrow_mut() = next.clone();
         self.apply_personalisation();
@@ -646,7 +674,6 @@ impl Browser {
             }
         }
         self.dirty.set(true);
-        Ok(())
     }
     pub fn apply_personalisation(self: &Rc<Self>) {
         let settings = self.state.borrow().settings.clone();

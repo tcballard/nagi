@@ -47,6 +47,30 @@ pub fn schema() -> serde_json::Value {
     }})
 }
 
+pub fn value_for_key(settings: &Settings, key: &str) -> Result<serde_json::Value, String> {
+    let json = serde_json::to_value(settings).map_err(|e| e.to_string())?;
+    let field = match key {
+        "new_tab.extension" => "new_tab_extension",
+        "layout.density" => "density",
+        "tabs.sidebar_width" => "sidebar_width",
+        "appearance.accent" => "accent",
+        "new_tab.url" => "new_tab_url",
+        "toolbar.actions" => "toolbar_actions",
+        "tabs.layout" => "tab_layout",
+        "features.link_previews" => "link_previews",
+        "search.engine" => "search",
+        "appearance" => "dark",
+        "restore_tabs" => "restore",
+        "block_trackers" => "block",
+        "zoom" => "zoom",
+        k if k.starts_with("shortcuts.") && OVERRIDES.contains(&&k[10..]) => {
+            return Ok(json["shortcuts"][&k[10..]].clone())
+        }
+        _ => return Err("Unknown setting".into()),
+    };
+    Ok(json[field].clone())
+}
+
 pub const OVERRIDES: &[&str] = &[
     "search",
     "address",
@@ -277,27 +301,7 @@ fn run(args: &[String]) -> Result<serde_json::Value, String> {
         return serde_json::to_value(initial.settings).map_err(|e| e.to_string());
     }
     if args.first().is_some_and(|a| a == "get") && args.len() == 2 {
-        let json = serde_json::to_value(&initial.settings).unwrap();
-        let key = match args[1].as_str() {
-            "new_tab.extension" => "new_tab_extension",
-            "layout.density" => "density",
-            "tabs.sidebar_width" => "sidebar_width",
-            "appearance.accent" => "accent",
-            "new_tab.url" => "new_tab_url",
-            "toolbar.actions" => "toolbar_actions",
-            "tabs.layout" => "tab_layout",
-            "features.link_previews" => "link_previews",
-            "search.engine" => "search",
-            "appearance" => "dark",
-            "restore_tabs" => "restore",
-            "block_trackers" => "block",
-            "zoom" => "zoom",
-            k if k.starts_with("shortcuts.") && OVERRIDES.contains(&&k[10..]) => {
-                return Ok(json["shortcuts"][&k[10..]].clone())
-            }
-            _ => return Err("Unknown setting".into()),
-        };
-        return Ok(json[key].clone());
+        return value_for_key(&initial.settings, &args[1]);
     }
     let mut expected = None;
     let mut dry_run = false;
