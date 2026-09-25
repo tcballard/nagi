@@ -8,13 +8,33 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-import tempfile
 import threading
 
 from PIL import Image
 from report import inventory, render
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def preflight(sites, profile):
+    blockers, warnings = [], []
+    for site in sites:
+        url = site['url']
+        if '.example' in url or 'YOUR-' in url:
+            blockers.append(f"{site['id']}: replace placeholder URL {url}")
+        for check in site['checks']:
+            if check['type'] == 'auth_persisted' and check.get('needs_configuration'):
+                warnings.append(f"{site['id']}: configure a logged-in selector or record blocked-auth")
+            if check['type'] == 'media_playback' and check.get('needs_configuration'):
+                warnings.append(f"{site['id']}: check media playback manually if scripted play fails")
+    profile = profile.expanduser().resolve()
+    # The ordinary browser's XDG directories must never be repurposed as a
+    # compatibility profile. The suite visits and screenshots every site.
+    home = Path.home().resolve()
+    if profile in (home / '.local/share/nagi', home / '.config/nagi',
+                   home / '.local/state/nagi', home / '.cache/nagi'):
+        blockers.append('profile: use a separate directory, not an everyday Nagi directory')
+    return blockers, warnings
 
 
 def local_drm_server():
@@ -94,6 +114,11 @@ def run(args):
     # Restrict every file created by this process and its Nagi children.
     os.umask(0o077)
     sites = inventory(args.sites)
+    blockers, warnings = preflight(sites, args.profile)
+    if blockers:
+        raise ValueError('Inventory is not ready:\n  ' + '\n  '.join(blockers))
+    if warnings:
+        print(f'{len(warnings)} checks are unconfigured; authenticated sites may be blocked-auth.', file=sys.stderr)
     # Never target a user's ordinary Nagi profile: this suite navigates all
     # sites, may play media, and takes screenshots of authenticated pages.
     env = profile_env(args.profile)
@@ -141,7 +166,7 @@ def run(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['run'])
+    parser.add_argument('command', choices=['preflight', 'run'])
     parser.add_argument('--sites', type=Path, default=ROOT / 'compat/sites.yaml')
     parser.add_argument('--profile', type=Path,
                         default=Path.home() / '.local/share/nagi-compat-profile')
@@ -150,6 +175,16 @@ def main():
     parser.add_argument('--repeat', type=int, choices=[1, 2], default=1)
     args = parser.parse_args()
     try:
+        if args.command == 'preflight':
+            sites = inventory(args.sites)
+            blockers, warnings = preflight(sites, args.profile)
+            if blockers or warnings:
+                for problem in blockers + warnings:
+                    print(problem)
+                print(f'{len(blockers)} blockers; {len(warnings)} checks need review')
+                return 1 if blockers else 0
+            print(f'Ready to attempt {len(sites)} sites; authenticate in the dedicated profile before running.')
+            return 0
         return run(args)
     except (ValueError, OSError) as error:
         parser.error(str(error))
