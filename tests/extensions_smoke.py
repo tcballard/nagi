@@ -95,7 +95,11 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         subprocess.run(['xdotool','key','ctrl+comma'],env=env,check=True)
         button=wait(lambda:accessible('Undo last settings change'))
         bounds=button.queryComponent().getExtents(pyatspi.DESKTOP_COORDS)
+        print('Undo bounds:',bounds,flush=True)
         subprocess.run(['xdotool','mousemove',str(bounds.x+bounds.width//2),str(bounds.y+bounds.height//2),'click','1'],env=env,check=True)
+        time.sleep(.5)
+        print('Undo after click:',cli('config','inspect'),flush=True)
+        subprocess.run(['import','-window','root',str(out/'undo-screen.png')],env=env,check=True)
         wait(lambda:cli('config','get','tabs.layout')=='Top')
         assert cli('config','get','zoom')==1.1, 'Undo reverted more than the approved transaction'
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
