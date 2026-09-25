@@ -7,6 +7,13 @@ critical and a check list. Edit URLs for `bank`, `mastodon`, `atlassian` and
 critical sites you actually need and adjust auth selectors for each login.
 Never commit cookies, credentials or an authenticated test profile.
 
+Before running, use `python3 compat/run.py preflight` to list placeholder
+URLs, login selectors and media checks. Placeholder URLs stop a run so the
+baseline cannot mistake them for browser failures. Login and media checks
+are warnings: an account you do not use can remain `blocked-auth`, and media
+partials still need a real click to confirm. The runner also refuses to use
+an everyday Nagi data directory as its test profile.
+
 For each site, `loads` must finish within 20 seconds without a WebKit error
 page or crash. `renders` saves a full-page screenshot and checks it is not more
 than 98% one colour. `no_blocker_console_errors` records all errors but only
