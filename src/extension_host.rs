@@ -114,7 +114,11 @@ impl Browser {
             done(result);
         });
     }
-    pub fn extension_command(self: &Rc<Self>, extension: &str, command: &str) -> Result<(), String> {
+    pub fn extension_command(
+        self: &Rc<Self>,
+        extension: &str,
+        command: &str,
+    ) -> Result<(), String> {
         if self.safe_mode {
             return Err("Extensions are disabled in safe mode".into());
         }
@@ -133,30 +137,51 @@ impl Browser {
                 self.new_tab(url, false, true);
             }
             Action::Sidebar => self.show_extension_sidebar(&installed),
-            Action::Configure { .. } => return Err("Persistent settings require native preview and approval".into()),
+            Action::Configure { .. } => {
+                return Err("Persistent settings require native preview and approval".into())
+            }
         }
         Ok(())
     }
-    fn preview_extension_configure(self: &Rc<Self>, extension_id: &str, command_id: &str) -> Result<(), String> {
+    fn preview_extension_configure(
+        self: &Rc<Self>,
+        extension_id: &str,
+        command_id: &str,
+    ) -> Result<(), String> {
         let installed = extensions::load(extension_id)?;
         if !installed.enabled {
             return Err("Extension is not approved at this revision".into());
         }
-        let command = installed.manifest.commands.iter().find(|c| c.id == command_id)
+        let command = installed
+            .manifest
+            .commands
+            .iter()
+            .find(|c| c.id == command_id)
             .ok_or("Unknown extension command")?;
         let Action::Configure { changes } = &command.action else {
             return self.extension_command(extension_id, command_id);
         };
         let changes = changes.clone();
         let initial = crate::config::document()?;
-        let preview = crate::config_store::transact(&crate::config::path(), &initial.settings,
-            Some(initial.revision), true, |d| {
+        let preview = crate::config_store::transact(
+            &crate::config::path(),
+            &initial.settings,
+            Some(initial.revision),
+            true,
+            |d| {
                 for (key, value) in &changes {
-                    crate::config::set(&mut d.settings, key,
-                        &value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string()))?;
+                    crate::config::set(
+                        &mut d.settings,
+                        key,
+                        &value
+                            .as_str()
+                            .map(str::to_owned)
+                            .unwrap_or_else(|| value.to_string()),
+                    )?;
                 }
                 Ok(())
-            })?;
+            },
+        )?;
         let mut lines = Vec::new();
         for key in changes.keys() {
             let before = crate::config::value_for_key(&initial.settings, key)?;
@@ -169,8 +194,12 @@ impl Browser {
             self.notice("This command would not change any settings");
             return Ok(());
         }
-        let detail = format!("{} · {}\n\n{}\n\nUndo is available in Nagi settings.",
-            installed.manifest.name, command.label, lines.join("\n"));
+        let detail = format!(
+            "{} · {}\n\n{}\n\nUndo is available in Nagi settings.",
+            installed.manifest.name,
+            command.label,
+            lines.join("\n")
+        );
         if detail.len() > 4096 {
             return Err("Settings preview is too long to display safely".into());
         }
@@ -178,27 +207,44 @@ impl Browser {
             .message("Apply these browser settings?")
             .detail(detail)
             .buttons(["Cancel", "Apply changes"])
-            .cancel_button(0).default_button(0).build();
+            .cancel_button(0)
+            .default_button(0)
+            .build();
         let weak = Rc::downgrade(self);
         let extension_id = extension_id.to_owned();
         let digest = installed.digest;
         let revision = initial.revision;
         dialog.choose(Some(&self.window), gio::Cancellable::NONE, move |answer| {
-            if answer != Ok(1) { return; }
-            let Some(b) = weak.upgrade() else { return; };
+            if answer != Ok(1) {
+                return;
+            }
+            let Some(b) = weak.upgrade() else {
+                return;
+            };
             let result = (|| -> Result<(), String> {
                 let current = extensions::load(&extension_id)?;
                 if !current.enabled || current.digest != digest {
                     return Err("Extension changed since preview; review it again".into());
                 }
-                crate::config_store::transact(&crate::config::path(), &initial.settings,
-                    Some(revision), false, |d| {
+                crate::config_store::transact(
+                    &crate::config::path(),
+                    &initial.settings,
+                    Some(revision),
+                    false,
+                    |d| {
                         for (key, value) in &changes {
-                            crate::config::set(&mut d.settings, key,
-                                &value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string()))?;
+                            crate::config::set(
+                                &mut d.settings,
+                                key,
+                                &value
+                                    .as_str()
+                                    .map(str::to_owned)
+                                    .unwrap_or_else(|| value.to_string()),
+                            )?;
                         }
                         Ok(())
-                    })?;
+                    },
+                )?;
                 Ok(())
             })();
             match result {
