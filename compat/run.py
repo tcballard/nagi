@@ -119,15 +119,20 @@ def run(args):
         raise ValueError('Inventory is not ready:\n  ' + '\n  '.join(blockers))
     if warnings:
         print(f'{len(warnings)} checks are unconfigured; authenticated sites may be blocked-auth.', file=sys.stderr)
+    if not args.binary.is_file():
+        raise ValueError(f'Build Nagi first; binary is missing: {args.binary}')
     # Never target a user's ordinary Nagi profile: this suite navigates all
     # sites, may play media, and takes screenshots of authenticated pages.
     env = profile_env(args.profile)
     day = datetime.date.today().isoformat()
     folder = args.output or ROOT / 'compat/reports' / day
+    if (folder / 'report.json').exists():
+        raise ValueError(f'Report already exists at {folder}; use --output for another run')
     folder.mkdir(parents=True, exist_ok=True)
     folder.chmod(0o700)
     server = local_drm_server()
     results = []
+    drm_results = []
     try:
         for attempt in range(args.repeat):
             capture = folder / f'run-{attempt + 1}'
@@ -136,13 +141,16 @@ def run(args):
             drm = probe(args.binary, env,
                         {'id': '__drm__', 'url': f'http://127.0.0.1:{server.server_port}/',
                          'checks': [{'type': 'drm_probe'}]}, capture)
+            drm_results.append(drm.get('drm_probe') or 'probe unavailable')
             for site in sites:
                 print(f'[{attempt + 1}/{args.repeat}] {site["id"]}', flush=True)
                 results.append((attempt, probe(args.binary, env, site, capture)))
     finally:
         server.shutdown()
-    drm_result = drm.get('drm_probe') or 'probe unavailable'
+    drm_result = drm_results[-1]
     last = [row for attempt, row in results if attempt == args.repeat - 1]
+    runs = [[row for attempt, row in results if attempt == index]
+            for index in range(args.repeat)]
     flaky = []
     if args.repeat > 1:
         by_id = {site['id']: [] for site in sites}
@@ -151,8 +159,8 @@ def run(args):
         flaky = [id for id, statuses in by_id.items() if len(set(statuses)) > 1]
         matching = 1 - len(flaky) / len(sites)
         print(f'Status agreement: {matching:.1%} ({len(sites)-len(flaky)}/{len(sites)})')
-    report = dict(date=day, drm_probe=drm_result, sites=last, flaky_sites=flaky,
-                  repeat_runs=args.repeat)
+    report = dict(date=day, drm_probe=drm_result, drm_probes=drm_results,
+                  sites=last, runs=runs, flaky_sites=flaky, repeat_runs=args.repeat)
     text = render(sites, report)
     for path, content in [(folder / 'report.json', json.dumps(report, indent=2) + '\n'),
                           (folder / 'report.md', text)]:

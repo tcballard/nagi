@@ -44,6 +44,24 @@ class ReportTests(unittest.TestCase):
             validate(sites, missing)
         self.assertIsNone(metric([rows[1]])['rate'])
 
+    def test_two_runs_keep_both_statuses_and_drm_results(self):
+        sites = [{'id': 'site', 'category': 'dev', 'critical': True,
+                  'auth_required': False}]
+        first = dict(id='site', status='fail', checks={}, elapsed_ms=1,
+                     console_error_count=0, screenshot='run-1/site.png')
+        second = dict(first, status='pass', screenshot='run-2/site.png')
+        report = dict(date='2026-09-25', sites=[second], runs=[[first], [second]],
+                      repeat_runs=2, drm_probe='supported',
+                      drm_probes=['unsupported', 'supported'], flaky_sites=['site'])
+        markdown = render(sites, report)
+        self.assertIn('Run 1 DRM: unsupported', markdown)
+        self.assertIn('Run 2 DRM: supported', markdown)
+        self.assertIn('| site | fail | run-1/site.png |', markdown)
+        self.assertIn('| site | pass | run-2/site.png |', markdown)
+        del report['drm_probes'][0]
+        with self.assertRaises(ValueError):
+            render(sites, report)
+
 
 if __name__ == '__main__':
     unittest.main()

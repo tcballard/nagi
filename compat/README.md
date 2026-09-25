@@ -69,6 +69,11 @@ raw JSON and regenerates the two reports:
 python3 compat/report.py --sites compat/sites.yaml --results /path/to/measured.json
 ```
 
+Both passes and their separate DRM probes are retained in the raw report and
+the markdown appendix, so a flaky result can be compared directly. The runner
+refuses to overwrite a same-day report; use `--output <new-directory>` for a
+second complete baseline.
+
 Pass rate is pass / (total minus blocked-auth); critical pass rate uses that
 same formula on critical sites. A zero denominator is reported unavailable.
 Critical failures form blocked workflows. A partial result never counts as a

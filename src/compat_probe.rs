@@ -112,7 +112,7 @@ fn run(args: &[String]) -> Result<i32, String> {
                 if(check.type==='interaction'){{
                   const input=document.querySelector(check.selector||'');
                   if(input){{input.value=check.text||'';input.dispatchEvent(new Event('input',{{bubbles:true}}));input.dispatchEvent(new Event('change',{{bubbles:true}}));}}
-                  result.interaction=!!input&&!!document.querySelector(check.expect_selector||'');
+                  result.interaction_input_found=!!input;
                 }}
                 if(check.type==='media_playback'){{
                   const media=document.querySelector(check.selector||'video, audio');
@@ -166,20 +166,33 @@ fn run(args: &[String]) -> Result<i32, String> {
                             if png.len() > 20 * 1024 * 1024 { return None; }
                             fs::write(&screenshot, &png).ok().map(|_| screenshot.to_string_lossy().into_owned())
                         });
-                        let script = "JSON.stringify({media_end:(document.querySelector('video, audio')||{}).currentTime||null,error_count:(window.__nagiCompatErrors||[]).length,error_messages:(window.__nagiCompatErrors||[]).slice(0,100).map(x=>String(x).slice(0,300)),drm_probe:window.__nagiDrmProbe||null})";
+                        let script = format!(r#"JSON.stringify((()=>{{
+                            const checks={checks_end};
+                            const mediaCheck=checks.find(c=>c.type==='media_playback');
+                            const interactionCheck=checks.find(c=>c.type==='interaction');
+                            const media=mediaCheck&&document.querySelector(mediaCheck.selector||'video, audio');
+                            return {{media_end:media?media.currentTime:null,
+                                interaction_complete:!!(interactionCheck&&interactionCheck.expect_selector&&document.querySelector(interactionCheck.expect_selector)),
+                                error_count:(window.__nagiCompatErrors||[]).length,
+                                error_messages:(window.__nagiCompatErrors||[]).slice(0,100).map(x=>String(x).slice(0,300)),
+                                drm_probe:window.__nagiDrmProbe||null}};
+                        }})())"#);
                         let app_result = app_end.clone();
                         let output_result = output_end.clone();
                         let done_result = done_end.clone();
-                        view_end.evaluate_javascript(script, Some("nagi-compat"), None, gio::Cancellable::NONE, move |after| {
-                            let later: Value = after.ok().and_then(|v| serde_json::from_str(v.to_str().as_str()).ok()).unwrap_or(json!({}));
+                        view_end.evaluate_javascript(&script, Some("nagi-compat"), None, gio::Cancellable::NONE, move |after| {
+                            let later = after.ok().and_then(|v| serde_json::from_str::<Value>(v.to_str().as_str()).ok());
+                            let after_probe_failed = later.is_none();
+                            let later = later.unwrap_or(json!({}));
                             let errors = later["error_count"].as_u64().unwrap_or(0);
                             let auth = checks_end.as_array().is_some_and(|c| c.iter().any(|c| c["type"]=="auth_persisted"));
                             let interaction = checks_end.as_array().is_some_and(|c| c.iter().any(|c| c["type"]=="interaction"));
                             let media = checks_end.as_array().is_some_and(|c| c.iter().any(|c| c["type"]=="media_playback"));
                             let media_ok = later["media_end"].as_f64().zip(dom_end["media_start"].as_f64()).is_some_and(|(end,start)| end-start>=2.0);
-                            let status = if saved.is_none() || dom_end["probe_error"]==true || dom_end["is_error_page"]==true {"fail"}
+                            let interaction_ok = dom_end["interaction_input_found"]==true && later["interaction_complete"]==true;
+                            let status = if saved.is_none() || after_probe_failed || dom_end["probe_error"]==true || dom_end["is_error_page"]==true {"fail"}
                                 else if auth && dom_end["auth_persisted"]!=true {"blocked-auth"}
-                                else if errors>0 || (interaction && dom_end["interaction"]!=true) || (media && !media_ok) {"partial"}
+                                else if errors>0 || (interaction && !interaction_ok) || (media && !media_ok) {"partial"}
                                 else {"pass"};
                             let rendered = saved.is_some();
                             finish(&app_result,&output_result,&done_result,json!({
@@ -188,7 +201,7 @@ fn run(args: &[String]) -> Result<i32, String> {
                                 "screenshot":saved,"drm_probe":later["drm_probe"],
                                 "checks":{"loads":{"ok":true},"renders":{"ok":rendered},
                                     "auth_persisted":{"ok":dom_end["auth_persisted"]==true},
-                                    "interaction":{"ok":dom_end["interaction"]==true},
+                                    "interaction":{"ok":interaction_ok},
                                     "media_playback":{"ok":media_ok},
                                     "no_blocker_console_errors":{"ok":errors==0}}
                             }));

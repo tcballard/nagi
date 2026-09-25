@@ -57,6 +57,13 @@ def validate(sites, result):
             raise ValueError(f"{row['id']}: blocked-auth on public site")
     if 'drm_probe' not in result:
         raise ValueError('DRM probe missing: engine support must be recorded once per run')
+    if 'runs' in result:
+        if len(result['runs']) != result.get('repeat_runs') or \
+                len(result.get('drm_probes', [])) != len(result['runs']):
+            raise ValueError('Every run must include site results and a DRM probe')
+        for run in result['runs']:
+            if len(run) != len(sites) or {row['id'] for row in run} != set(by_id):
+                raise ValueError('Every run must include exactly one result per site')
 
 
 def render(sites, result):
@@ -90,6 +97,14 @@ def render(sites, result):
         lines.append(f"| {row['id']} | {site['category']} | {site['critical']} | "
                      f"{row['status']} | {row['elapsed_ms']} | {row['console_error_count']} | {screenshot} |")
     lines += ['', 'Flaky sites: ' + (', '.join(result.get('flaky_sites', [])) or 'none reported'), '']
+    if 'runs' in result:
+        lines += ['## Per-run evidence', '']
+        for index, (run, drm) in enumerate(zip(result['runs'], result['drm_probes']), 1):
+            lines += [f'Run {index} DRM: {drm}', '',
+                      '| Site | Status | Screenshot |', '|---|---|---|']
+            lines += [f"| {row['id']} | {row['status']} | {row['screenshot'] or ''} |"
+                      for row in run]
+            lines.append('')
     return '\n'.join(lines)
 
 
