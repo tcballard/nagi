@@ -1,10 +1,19 @@
 import copy
 import unittest
+from pathlib import Path
 
 from report import inventory, metric, render
+from run import preflight
 
 
 class ReportTests(unittest.TestCase):
+    def test_preflight_finds_placeholder_urls_and_protects_everyday_profile(self):
+        sites = inventory('compat/sites.yaml')
+        blockers, warnings = preflight(sites, Path.home() / '.local/share/nagi')
+        self.assertTrue(any('bank: replace placeholder URL' in item for item in blockers))
+        self.assertTrue(any('profile: use a separate directory' in item for item in blockers))
+        self.assertTrue(any('gmail: configure a logged-in selector' in item for item in warnings))
+
     def test_all_52_sites_are_seeded(self):
         sites = inventory('compat/sites.yaml')
         self.assertEqual(len(sites), 52)
