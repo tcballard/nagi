@@ -94,7 +94,8 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:cli('config','get','tabs.layout')=='Left')
         subprocess.run(['xdotool','key','ctrl+comma'],env=env,check=True)
         wait(lambda:accessible('Undo last settings change'))
-        geometry=subprocess.check_output(['xdotool','getactivewindow','getwindowgeometry','--shell'],env=env,text=True)
+        window_id=subprocess.check_output(['xdotool','search','--pid',str(app.pid)],env=env,text=True).splitlines()[0]
+        geometry=subprocess.check_output(['xdotool','getwindowgeometry','--shell',window_id],env=env,text=True)
         window=dict(line.split('=',1) for line in geometry.splitlines() if '=' in line)
         subprocess.run(['xdotool','mousemove',str(int(window['X'])+int(window['WIDTH'])-250),str(int(window['Y'])+267),'click','1'],env=env,check=True)
         wait(lambda:cli('config','get','tabs.layout')=='Top')
