@@ -84,6 +84,8 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         cli('config','set','zoom','1.1')
         click('Apply changes')
         assert cli('config','get','tabs.layout')=='Top', 'Stale preview applied despite revision conflict'
+        wait(lambda:not accessible('Apply changes'))
+        time.sleep(.5)
         click('Change tab layout')
         click('Apply changes')
         wait(lambda:cli('config','get','tabs.layout')=='Left')
