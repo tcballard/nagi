@@ -33,7 +33,9 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         assert (result.returncode==0)==ok, result.stdout+result.stderr
         return json.loads(result.stdout if ok else result.stderr)
     manifest = {'api':1,'id':'fixture','name':'Extension fixture','description':'Test-only extension in a disposable profile',
-        'commands':[{'id':'sidebar','label':'Open fixture sidebar','action':{'kind':'sidebar'}}],
+        'commands':[{'id':'sidebar','label':'Open fixture sidebar','action':{'kind':'sidebar'}},
+                    {'id':'configure','label':'Change tab layout',
+                     'action':{'kind':'configure','changes':{'tabs.layout':'Left'}}}],
         'sidebar_html':f'<h2>Offline sidebar</h2><script>fetch("{origin}/leak").catch(()=>{{}})</script>',
         'sites':[{'origin':origin,'script':'document.querySelector("h1").textContent="Extension active";','css':'h1 { color: rgb(1,2,3); }'}],
         'events':[{'kind':'navigation.finished','origin':origin,'message':'Fixture navigation completed'}]}
@@ -69,6 +71,12 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:cli('extension','list')[0]['enabled'])
     try:
         approve()
+        commands=cli('browser','extension.commands')['result'][0]['commands']
+        assert [command['id'] for command in commands]==['sidebar'], commands
+        assert cli('config','get','tabs.layout')=='Top'
+        denied=cli('browser','extension.run','{"extension":"fixture","command":"configure"}',ok=False)
+        assert 'cannot apply persistent' in denied['error'], denied
+        assert cli('config','get','tabs.layout')=='Top'
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
         stdout,stderr=attach.communicate(timeout=20)

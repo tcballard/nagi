@@ -118,6 +118,7 @@ impl Browser {
         self: &Rc<Self>,
         extension: &str,
         command: &str,
+        allow_configure: bool,
     ) -> Result<(), String> {
         if self.safe_mode {
             return Err("Extensions are disabled in safe mode".into());
@@ -132,6 +133,9 @@ impl Browser {
             .iter()
             .find(|c| c.id == command)
             .ok_or("Unknown extension command")?;
+        if !allow_configure && matches!(&command.action, Action::Configure { .. }) {
+            return Err("Browser-control agents cannot apply persistent extension settings; use the native Extensions panel".into());
+        }
         match &command.action {
             Action::Open { url } => {
                 self.new_tab(url, false, true);
@@ -231,7 +235,7 @@ impl Browser {
                     let command = command.id.clone();
                     button.connect_clicked(move |_| {
                         if let Some(b) = weak.upgrade() {
-                            if let Err(e) = b.extension_command(&id, &command) {
+                            if let Err(e) = b.extension_command(&id, &command, true) {
                                 b.notice(&e);
                             }
                         }
