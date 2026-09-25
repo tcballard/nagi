@@ -130,8 +130,11 @@ only open/sidebar commands through
 `nagi browser extension.commands` and
 `nagi browser extension.run '{"extension":"research","command":"sidebar"}'`.
 It cannot run an extension's `configure` command: page-reading access must not
-silently become a persistent settings write. Native Extensions-panel commands
-remain a user action. This boundary does not constrain another same-user process
+silently become a persistent settings write. A configure command clicked in the
+native Extensions panel previews each changed setting and requires an explicit
+Apply changes action. Cancellation writes nothing; a concurrent settings change
+invalidates the preview and must be reviewed again. The existing settings history
+supports undo. This boundary does not constrain another same-user process
 with filesystem write access or a shell that can run `nagi config set`; an
 agent with those permissions requires separate isolation before the broader
 agent-control contract can be claimed secure.

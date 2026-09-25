@@ -114,12 +114,7 @@ impl Browser {
             done(result);
         });
     }
-    pub fn extension_command(
-        self: &Rc<Self>,
-        extension: &str,
-        command: &str,
-        allow_configure: bool,
-    ) -> Result<(), String> {
+    pub fn extension_command(self: &Rc<Self>, extension: &str, command: &str) -> Result<(), String> {
         if self.safe_mode {
             return Err("Extensions are disabled in safe mode".into());
         }
@@ -133,37 +128,84 @@ impl Browser {
             .iter()
             .find(|c| c.id == command)
             .ok_or("Unknown extension command")?;
-        if !allow_configure && matches!(&command.action, Action::Configure { .. }) {
-            return Err("Browser-control agents cannot apply persistent extension settings; use the native Extensions panel".into());
-        }
         match &command.action {
             Action::Open { url } => {
                 self.new_tab(url, false, true);
             }
             Action::Sidebar => self.show_extension_sidebar(&installed),
-            Action::Configure { changes } => {
-                let initial = crate::config::document()?;
-                crate::config_store::transact(
-                    &crate::config::path(),
-                    &initial.settings,
-                    None,
-                    false,
-                    |d| {
-                        for (key, value) in changes {
-                            crate::config::set(
-                                &mut d.settings,
-                                key,
-                                &value
-                                    .as_str()
-                                    .map(str::to_owned)
-                                    .unwrap_or_else(|| value.to_string()),
-                            )?;
-                        }
-                        Ok(())
-                    },
-                )?;
+            Action::Configure { .. } => return Err("Persistent settings require native preview and approval".into()),
+        }
+        Ok(())
+    }
+    fn preview_extension_configure(self: &Rc<Self>, extension_id: &str, command_id: &str) -> Result<(), String> {
+        let installed = extensions::load(extension_id)?;
+        if !installed.enabled {
+            return Err("Extension is not approved at this revision".into());
+        }
+        let command = installed.manifest.commands.iter().find(|c| c.id == command_id)
+            .ok_or("Unknown extension command")?;
+        let Action::Configure { changes } = &command.action else {
+            return self.extension_command(extension_id, command_id);
+        };
+        let changes = changes.clone();
+        let initial = crate::config::document()?;
+        let preview = crate::config_store::transact(&crate::config::path(), &initial.settings,
+            Some(initial.revision), true, |d| {
+                for (key, value) in &changes {
+                    crate::config::set(&mut d.settings, key,
+                        &value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string()))?;
+                }
+                Ok(())
+            })?;
+        let mut lines = Vec::new();
+        for key in changes.keys() {
+            let before = crate::config::value_for_key(&initial.settings, key)?;
+            let after = crate::config::value_for_key(&preview.settings, key)?;
+            if before != after {
+                lines.push(format!("{key}: {before} → {after}"));
             }
         }
+        if lines.is_empty() {
+            self.notice("This command would not change any settings");
+            return Ok(());
+        }
+        let detail = format!("{} · {}\n\n{}\n\nUndo is available in Nagi settings.",
+            installed.manifest.name, command.label, lines.join("\n"));
+        if detail.len() > 4096 {
+            return Err("Settings preview is too long to display safely".into());
+        }
+        let dialog = gtk::AlertDialog::builder()
+            .message("Apply these browser settings?")
+            .detail(detail)
+            .buttons(["Cancel", "Apply changes"])
+            .cancel_button(0).default_button(0).build();
+        let weak = Rc::downgrade(self);
+        let extension_id = extension_id.to_owned();
+        let digest = installed.digest;
+        let revision = initial.revision;
+        dialog.choose(Some(&self.window), gio::Cancellable::NONE, move |answer| {
+            if answer != Ok(1) { return; }
+            let Some(b) = weak.upgrade() else { return; };
+            let result = (|| -> Result<(), String> {
+                let current = extensions::load(&extension_id)?;
+                if !current.enabled || current.digest != digest {
+                    return Err("Extension changed since preview; review it again".into());
+                }
+                crate::config_store::transact(&crate::config::path(), &initial.settings,
+                    Some(revision), false, |d| {
+                        for (key, value) in &changes {
+                            crate::config::set(&mut d.settings, key,
+                                &value.as_str().map(str::to_owned).unwrap_or_else(|| value.to_string()))?;
+                        }
+                        Ok(())
+                    })?;
+                Ok(())
+            })();
+            match result {
+                Ok(()) => b.notice("Settings applied; use Nagi settings to undo"),
+                Err(error) => b.notice(&error),
+            }
+        });
         Ok(())
     }
     pub fn show_extensions(self: &Rc<Self>) {
@@ -235,7 +277,7 @@ impl Browser {
                     let command = command.id.clone();
                     button.connect_clicked(move |_| {
                         if let Some(b) = weak.upgrade() {
-                            if let Err(e) = b.extension_command(&id, &command, true) {
+                            if let Err(e) = b.preview_extension_configure(&id, &command) {
                                 b.notice(&e);
                             }
                         }

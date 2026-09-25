@@ -75,8 +75,18 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         assert [command['id'] for command in commands]==['sidebar'], commands
         assert cli('config','get','tabs.layout')=='Top'
         denied=cli('browser','extension.run','{"extension":"fixture","command":"configure"}',ok=False)
-        assert 'cannot apply persistent' in denied['error'], denied
+        assert 'require native preview' in denied['error'], denied
         assert cli('config','get','tabs.layout')=='Top'
+        click('Change tab layout')
+        click('Cancel')
+        assert cli('config','get','tabs.layout')=='Top'
+        click('Change tab layout')
+        cli('config','set','zoom','1.1')
+        click('Apply changes')
+        assert cli('config','get','tabs.layout')=='Top', 'Stale preview applied despite revision conflict'
+        click('Change tab layout')
+        click('Apply changes')
+        wait(lambda:cli('config','get','tabs.layout')=='Left')
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
         stdout,stderr=attach.communicate(timeout=20)

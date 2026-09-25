@@ -299,7 +299,6 @@ impl Browser {
                             .get("command")
                             .and_then(Value::as_str)
                             .ok_or("Supply command ID")?,
-                        false,
                     )?;
                     Ok(Some(json!({"performed":true})))
                 }
