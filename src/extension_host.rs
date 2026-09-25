@@ -195,7 +195,7 @@ impl Browser {
             return Ok(());
         }
         let detail = format!(
-            "{} · {}\n\n{}\n\nUndo is available in Nagi settings.",
+            "{} · {}\n\n{}\n\nUndo is available in Settings.",
             installed.manifest.name,
             command.label,
             lines.join("\n")
@@ -248,7 +248,7 @@ impl Browser {
                 Ok(())
             })();
             match result {
-                Ok(()) => b.notice("Settings applied; use Nagi settings to undo"),
+                Ok(()) => b.notice("Settings applied; use Settings to undo"),
                 Err(error) => b.notice(&error),
             }
         });

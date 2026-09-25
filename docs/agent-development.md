@@ -133,8 +133,10 @@ It cannot run an extension's `configure` command: page-reading access must not
 silently become a persistent settings write. A configure command clicked in the
 native Extensions panel previews each changed setting and requires an explicit
 Apply changes action. Cancellation writes nothing; a concurrent settings change
-invalidates the preview and must be reviewed again. The existing settings history
-supports undo. This boundary does not constrain another same-user process
+invalidates the preview and must be reviewed again. Settings → Undo last settings
+change reverses the most recent settings transaction, including an approved
+extension change when it is still the most recent transaction. This boundary
+does not constrain another same-user process
 with filesystem write access or a shell that can run `nagi config set`; an
 agent with those permissions requires separate isolation before the broader
 agent-control contract can be claimed secure.

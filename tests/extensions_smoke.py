@@ -92,6 +92,10 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:accessible('Apply changes'))
         click('Apply changes')
         wait(lambda:cli('config','get','tabs.layout')=='Left')
+        subprocess.run(['xdotool','key','ctrl+comma'],env=env,check=True)
+        click('Undo last settings change')
+        wait(lambda:cli('config','get','tabs.layout')=='Top')
+        assert cli('config','get','zoom')==1.1, 'Undo reverted more than the approved transaction'
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
         stdout,stderr=attach.communicate(timeout=20)
