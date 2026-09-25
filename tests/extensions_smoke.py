@@ -87,6 +87,18 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:not accessible('Apply changes'))
         time.sleep(.5)
         click('Change tab layout')
+        if not accessible('Apply changes'):
+            subprocess.run(['import','-window','root',str(out/'extension-approval-timeout.png')],env=env,check=True)
+            def visible_names():
+                pending=[pyatspi.Registry.getDesktop(0)]; names=[]
+                while pending and len(names)<100:
+                    node=pending.pop()
+                    try:
+                        if node.name and node.getState().contains(pyatspi.STATE_SHOWING): names.append(node.name)
+                        pending.extend(node)
+                    except Exception: pass
+                return names
+            print('Approval dialog not visible; showing:',visible_names(),flush=True)
         click('Apply changes')
         wait(lambda:cli('config','get','tabs.layout')=='Left')
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
