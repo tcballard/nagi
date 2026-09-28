@@ -84,6 +84,7 @@ jobs:
           mkdir -p dist/nagi-linux-x86_64/scripts
           cp scripts/install-icons.sh dist/nagi-linux-x86_64/scripts/
           cp scripts/install-binary.sh dist/nagi-linux-x86_64/install.sh
+          test -x dist/nagi-linux-x86_64/install.sh
           cp scripts/nagi_codex.py dist/nagi-linux-x86_64/scripts/
           tar -C dist -czf dist/nagi-linux-x86_64.tar.gz nagi-linux-x86_64
           (cd dist && sha256sum nagi-linux-x86_64.tar.gz > SHA256SUMS)
