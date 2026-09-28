@@ -1,6 +1,6 @@
 //! Proposals carry no approval authority. Only the native owner UI can commit.
 use crate::{browser::Browser, config, config_store, core::Settings, extensions};
-use gtk::{gio, prelude::*};
+use gtk::gio;
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::{
@@ -15,6 +15,7 @@ pub struct Proposal {
     revision: u64,
     reason: String,
     detail: String,
+    before: Settings,
     next: Settings,
     extension: Option<(String, String)>,
     expires: Instant,
@@ -141,6 +142,7 @@ impl Browser {
             revision: input.revision,
             reason: input.reason,
             detail,
+            before: initial.settings,
             next: preview.settings,
             extension,
             expires: Instant::now() + Duration::from_secs(ttl),
@@ -220,7 +222,7 @@ impl Browser {
                 }
                 config_store::transact_audited(
                     &config::path(),
-                    &proposal.next,
+                    &proposal.before,
                     Some(proposal.revision),
                     false,
                     Some((&proposal.id, &proposal.reason, "applied")),

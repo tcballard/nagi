@@ -45,6 +45,7 @@ fn run(args: &[String]) -> Result<i32, String> {
     let mut child = Command::new("/usr/bin/bwrap");
     child.args([
         "--unshare-all",
+        "--unshare-user",
         "--disable-userns",
         "--die-with-parent",
         "--new-session",

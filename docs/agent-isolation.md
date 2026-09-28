@@ -41,7 +41,8 @@ Use `nagi browser settings.propose 'JSON'`. For an approved extension command,
 replace `changes` with `"extension":{"id":"research","command":"reading-layout"}`.
 Only configure commands can take that route. Exactly one proposal may await
 review. The default lifetime is 300 seconds; `ttl_seconds` may shorten it to
-1–300 seconds. `settings.status` returns the pending proposal ID or null.
+1–300 seconds. `settings.status` returns the pending proposal ID or null. Supply a `proposal`
+ID to retrieve its last durable outcome and revision within the current session.
 `settings.cancel` accepts `{"proposal":"ID"}`. No approve/apply tool exists.
 
 The owner clicks **Review agent change** in the control bar, reads the exact

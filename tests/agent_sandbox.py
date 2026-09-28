@@ -14,6 +14,9 @@ with tempfile.TemporaryDirectory(prefix='nagi-host-secret-') as temporary:
     (runtime / 'nagi-control').mkdir(parents=True)
     secret = root / 'private'
     secret.write_text('host-only')
+    settings = root / 'state/nagi/settings.json'
+    settings.parent.mkdir(parents=True)
+    settings.write_text('{"zoom":1.0}')
     endpoint = socket.socket(socket.AF_UNIX)
     endpoint.bind(str(runtime / 'nagi-control/browser.sock'))
     endpoint.listen()
@@ -56,13 +59,13 @@ assert pathlib.Path('/home/agent/.local/state/nagi/settings.json').exists()
 print(json.dumps({'isolated':True,'socket':True,'host_unchanged':True}))
 '''
     code = f'HOST_SECRET={str(secret)!r}\nHOST_PID={os.getpid()}\nHOST_PORT={network.getsockname()[1]}\n' + code
-    env = dict(os.environ, XDG_RUNTIME_DIR=str(runtime), NAGI_TEST_SECRET='do-not-inherit')
+    env = dict(os.environ, XDG_RUNTIME_DIR=str(runtime), XDG_STATE_HOME=str(root/'state'), NAGI_TEST_SECRET='do-not-inherit')
     result = subprocess.run([binary, 'agent-run', '--', '/usr/bin/python3', '-'],
                             input=code, capture_output=True, text=True, env=env, timeout=30)
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(result.stdout)['isolated']
     assert secret.read_text() == 'host-only'
-    assert not (root / 'state').exists()
+    assert settings.read_text() == '{"zoom":1.0}'
     worker.join(timeout=2)
     assert not worker.is_alive()
     endpoint.close()

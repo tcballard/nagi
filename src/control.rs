@@ -303,7 +303,15 @@ impl Browser {
                 }
                 "settings.status" => {
                     self.expire_agent_proposal();
-                    Ok(Some(json!({"pending":self.control.borrow().proposal.as_ref().map(|p| &p.id)})))
+                    let state = self.control.borrow();
+                    let outcome = if let Some(proposal) = params.get("proposal").and_then(Value::as_str) {
+                        if !proposal.starts_with(&format!("{}:", state.session)) {
+                            return Err("Proposal is from another control session".into());
+                        }
+                        crate::config::document()?.audit.into_iter().rev().find(|a| a.proposal == proposal)
+                            .map(|a| json!({"outcome":a.outcome,"revision":a.to_revision}))
+                    } else { None };
+                    Ok(Some(json!({"pending":state.proposal.as_ref().map(|p| &p.id),"last_outcome":outcome})))
                 }
                 "extension.commands" => Ok(Some(json!(crate::extensions::list()
                     .into_iter()
