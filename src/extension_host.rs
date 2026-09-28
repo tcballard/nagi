@@ -226,7 +226,7 @@ impl Browser {
                 if !current.enabled || current.digest != digest {
                     return Err("Extension changed since preview; review it again".into());
                 }
-                crate::config_store::transact(
+                let updated = crate::config_store::transact(
                     &crate::config::path(),
                     &initial.settings,
                     Some(revision),
@@ -245,10 +245,13 @@ impl Browser {
                         Ok(())
                     },
                 )?;
-                Ok(())
+                Ok(updated.settings)
             })();
             match result {
-                Ok(()) => b.notice("Settings applied; use Settings to undo"),
+                Ok(settings) => {
+                    b.apply_settings(settings);
+                    b.notice("Settings applied; use Settings to undo");
+                },
                 Err(error) => b.notice(&error),
             }
         });
