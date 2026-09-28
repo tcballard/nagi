@@ -246,11 +246,11 @@ impl Browser {
             "Suggest a browser settings change; you review it before it applies",
         ));
         ask_agent.set_sensitive(false);
-        footer.append(&ask_agent);
         let submit = icon("go-up-symbolic", "Go · Enter");
         submit.add_css_class("composer-submit");
         submit.set_sensitive(false);
         footer.append(&submit);
+        footer.append(&ask_agent);
         chrome.append(&footer);
         let address_layer = gtk::Overlay::new();
         let backdrop = gtk::Button::new();
