@@ -62,7 +62,8 @@ pub struct Browser {
     matches: RefCell<Vec<crate::suggestions::Suggestion>>,
     address_button: gtk::Button,
     pub address: gtk::Entry,
-    address_error: gtk::Label,
+    pub(crate) agent_request: RefCell<Option<gio::Subprocess>>,
+    pub(crate) address_error: gtk::Label,
     pub progress: gtk::ProgressBar,
     pub status: gtk::Label,
     pub panel: gtk::Box,
@@ -235,15 +236,21 @@ impl Browser {
             .build();
         chrome.append(&suggestion_scroll);
         let footer = gtk::Box::new(gtk::Orientation::Horizontal, 12);
-        let hint = label("Search or paste a link · Esc to close", "composer-hint");
+        let hint = label("Enter to search · Esc to close", "composer-hint");
         hint.set_hexpand(true);
         hint.set_xalign(0.0);
         hint.set_ellipsize(gtk::pango::EllipsizeMode::End);
         footer.append(&hint);
+        let ask_agent = gtk::Button::with_label("Ask agent");
+        ask_agent.set_tooltip_text(Some(
+            "Suggest a browser settings change; you review it before it applies",
+        ));
+        ask_agent.set_sensitive(false);
         let submit = icon("go-up-symbolic", "Go · Enter");
         submit.add_css_class("composer-submit");
         submit.set_sensitive(false);
         footer.append(&submit);
+        footer.append(&ask_agent);
         chrome.append(&footer);
         let address_layer = gtk::Overlay::new();
         let backdrop = gtk::Button::new();
@@ -358,6 +365,7 @@ impl Browser {
             matches: RefCell::new(vec![]),
             address_button,
             address,
+            agent_request: RefCell::new(None),
             address_error,
             progress,
             status,
@@ -467,8 +475,15 @@ impl Browser {
             }
         });
         let weak = Rc::downgrade(&b);
+        ask_agent.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.ask_agent();
+            }
+        });
+        let weak = Rc::downgrade(&b);
         b.address.connect_changed(move |entry| {
             submit.set_sensitive(!entry.text().trim().is_empty());
+            ask_agent.set_sensitive(!entry.text().trim().is_empty());
             if let Some(b) = weak.upgrade() {
                 b.refresh_suggestions();
             }

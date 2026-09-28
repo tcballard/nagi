@@ -171,8 +171,8 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         fake=pathlib.Path(directory)/'fake-codex'
         proposed=dict(session=session,revision=cli('config','inspect')['revision'],
                       reason='Fixture Codex host proposal',changes={'toolbar.actions':['back']})
-        action=json.dumps(dict(action='call',method='settings.propose',params=proposed,answer=''))
-        final=json.dumps(dict(action='final',method='',params={},answer='Waiting for native review.'))
+        action=json.dumps(dict(action='call',method='settings.propose',params=json.dumps(proposed),answer=''))
+        final=json.dumps(dict(action='final',method='',params='{}',answer='Waiting for native review.'))
         fake.write_text('''#!/usr/bin/env python3
 import json, os, sys
 assert 'DISPLAY' not in os.environ and 'XDG_RUNTIME_DIR' not in os.environ
@@ -182,9 +182,9 @@ step=0
 for line in sys.stdin:
  msg=json.loads(line)
  if msg.get('method')=='initialize': emit({'id':msg['id'],'result':{}})
- elif msg.get('method')=='thread/start': emit({'id':msg['id'],'result':{'thread':{'id':'fixture'}}})
+ elif msg.get('method')=='thread/start': emit({'id':msg['id'],'result':{'thread':{'id':'fixture'},'approvalPolicy':'never','activePermissionProfile':{'id':'nagi_browser','extends':None}}})
  elif msg.get('method')=='turn/start':
-  assert msg['params']['sandboxPolicy']['access']['type']=='restricted'
+  assert 'sandboxPolicy' not in msg['params']
   emit({'id':msg['id'],'result':{'turn':{'id':str(step)}}})
   value = %r if step==0 else %r
   emit({'method':'item/completed','params':{'item':{'type':'agentMessage','phase':'final_answer','text':value}}})

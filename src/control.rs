@@ -116,6 +116,7 @@ impl Browser {
         }
     }
     pub fn stop_control(&self) {
+        self.cancel_agent_request();
         self.discard_agent_proposal("stopped");
         let (server, pending) = {
             let mut state = self.control.borrow_mut();

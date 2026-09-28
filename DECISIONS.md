@@ -194,3 +194,17 @@ References reviewed on 2026-09-28:
 - https://cua.ai/docs/concepts/how-permission-policies-work
 - https://cua.ai/docs/concepts/how-cua-driver-is-validated
 - https://cua.ai/docs/reference/cua-driver/platform-support
+
+
+## 2026-09-28 — owner-requested Ctrl+L settings requests
+
+Tom explicitly requested suggesting browser changes through the Ctrl+L panel.
+This authorizes the narrow Ask agent entry point as an exception to the feature
+freeze. It prepares schema-bound settings proposals using the existing isolated
+worker and native owner review. It does not authorize automatic approval,
+arbitrary shell execution, new extension capabilities, or a G2 sign-off.
+
+Live owner approval and undo were observed in the UI and persisted state. A
+subsequent attempted rejection was clarified by Tom as an Apply click, so
+rejection remains unverified. The first rejection proposal expired. T4's hour,
+novel attacks and remaining acceptance matrix are still outstanding.
