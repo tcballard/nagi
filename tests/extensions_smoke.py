@@ -170,8 +170,19 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         click('Apply proposal')
         outcome(proposal,'failed')
         assert cli('config','get','tabs.layout')=='Top'
-        subprocess.run([binary,'--extensions',origin+'/reattach'],env=env,check=True)
+        # Digest revocation deliberately terminates affected WebKit processes.
+        # Begin the separate site-hook fixture in a fresh browser session.
+        old_session=session
+        app.terminate(); app.wait(timeout=5)
+        app=subprocess.Popen([binary,'--agent-control','--extensions',origin+'/reattach'],env=env,stdout=log,stderr=log)
         wait(lambda:'/reattach' in requests)
+        session=cli('browser','capabilities')['session']
+        assert session!=old_session
+        refused=cli('browser','settings.propose',json.dumps(dict(session=old_session,
+                    revision=cli('config','inspect')['revision'],reason='Old session replay',
+                    changes={'toolbar.actions':['back']})),ok=False)
+        assert 'current control session' in refused['error'],refused
+        assert cli('config','get','toolbar.actions')==[]
         approve()
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
