@@ -1,6 +1,7 @@
 """Exercise the real bubblewrap boundary; unsupported namespaces fail this test."""
 import json
 import os
+import pty
 from pathlib import Path
 import socket
 import subprocess
@@ -68,6 +69,13 @@ print(json.dumps({'isolated':True,'socket':True,'host_unchanged':True}))
     assert settings.read_text() == '{"zoom":1.0}'
     worker.join(timeout=2)
     assert not worker.is_alive()
+    master, slave = pty.openpty()
+    try:
+        rejected = subprocess.run([binary, 'agent-run', '--', '/usr/bin/true'],
+                                  stdin=slave, capture_output=True, env=env, timeout=5)
+        assert rejected.returncode != 0 and b'no terminal access' in rejected.stderr
+    finally:
+        os.close(master); os.close(slave)
     endpoint.close()
     network.close()
 print('real agent sandbox isolation passed')

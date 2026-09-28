@@ -164,7 +164,8 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         cli('extension','install',input=json.dumps(manifest))
         click('Apply proposal')
         assert cli('config','get','tabs.layout')=='Top'
-        subprocess.run([binary,'--extensions'],env=env,check=True)
+        subprocess.run([binary,'--extensions',origin+'/reattach'],env=env,check=True)
+        wait(lambda:'/reattach' in requests)
         approve()
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
