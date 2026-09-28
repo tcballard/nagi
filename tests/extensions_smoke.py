@@ -181,7 +181,7 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         refused=cli('browser','settings.propose',json.dumps(dict(session=old_session,
                     revision=cli('config','inspect')['revision'],reason='Old session replay',
                     changes={'toolbar.actions':['back']})),ok=False)
-        assert 'current control session' in refused['error'],refused
+        assert refused['error']=='Stale browser session',refused
         assert cli('config','get','toolbar.actions')==[]
         approve()
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
