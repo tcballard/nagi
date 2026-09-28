@@ -29,6 +29,10 @@ shows local tab suggestions in the development composer on Ubuntu/Xvfb.
 [Verification](VERIFICATION.md) · [Build and configuration](#build-and-run-on-omarchy--arch) ·
 [Keyboard shortcuts](#keyboard) · [Known limits](#status).
 
+Optional signed-in Codex CLI browser control: start Nagi with `--agent-control`,
+then run `nagi-codex 'Summarise my open tabs'`. The [isolation guide](docs/agent-isolation.md)
+explains login support, native approval and the uncompleted on-device gate.
+
 ![Nagi composer with local tab suggestions on Ubuntu Xvfb](docs/polish-suggestions.png)
 
 ## Included
