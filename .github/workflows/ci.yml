@@ -58,6 +58,7 @@ jobs:
       - run: python3 tests/config_transactions.py
       - run: python3 tests/extensions_cli.py
       - run: python3 tests/personal_recovery.py
+      - run: python3 tests/codex_adapter.py
       - name: Validate desktop launcher
         run: desktop-file-validate packaging/io.github.tcballard.Nagi.desktop
       - name: Exercise real browser with local fixtures
@@ -83,6 +84,7 @@ jobs:
           mkdir -p dist/nagi-linux-x86_64/scripts
           cp scripts/install-icons.sh dist/nagi-linux-x86_64/scripts/
           cp scripts/install-binary.sh dist/nagi-linux-x86_64/install.sh
+          cp scripts/nagi_codex.py dist/nagi-linux-x86_64/scripts/
           tar -C dist -czf dist/nagi-linux-x86_64.tar.gz nagi-linux-x86_64
           (cd dist && sha256sum nagi-linux-x86_64.tar.gz > SHA256SUMS)
       - name: Upload build and screenshots
@@ -118,9 +120,11 @@ jobs:
           (cd dist && sha256sum ./*.pkg.tar.zst > ARCH-SHA256SUMS)
           pacman -U --noconfirm dist/*.pkg.tar.zst
           nagi --version
+          test -x /usr/bin/nagi-codex
           test -f /usr/share/applications/io.github.tcballard.Nagi.desktop
           pacman -R --noconfirm nagi
           test ! -e /usr/bin/nagi
+          test ! -e /usr/bin/nagi-codex
       - uses: actions/upload-artifact@v4
         with:
           name: nagi-arch-x86_64

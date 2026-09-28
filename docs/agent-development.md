@@ -71,6 +71,9 @@ running browser does not change that process's mode.
 Start a new process with `nagi --agent-control`. Existing instances must be
 closed first. The CLI is `nagi browser METHOD '[JSON_PARAMS]' [REQUEST_ID]`.
 `capabilities` discovers the supported methods. No HTTP server or MCP adapter.
+For an optional locally signed-in Codex CLI host, use `nagi-codex` as described
+in [agent isolation](agent-isolation.md). Its browser calls still pass through
+the isolated control boundary and native settings review.
 The Unix socket is mode 0600 in a mode-0700 runtime directory; this is a local
 same-user interface, not isolation from hostile processes running as you.
 

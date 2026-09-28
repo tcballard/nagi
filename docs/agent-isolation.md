@@ -19,13 +19,45 @@ profile or extension commands executed inside it affect only its temporary home.
 The trusted host must treat worker output as data, never execute it or forward
 terminal escape sequences. Do not pass additional host handles or tool access.
 
-This is deliberately an offline worker contract. Ordinary network-dependent
-coding-agent CLIs will not function unchanged. A trusted model host may exchange
-bounded task data over its pipes; no model provider adapter is supplied here.
+The worker remains offline. `nagi-codex` is an optional, separate host for a
+locally signed-in Codex CLI. Its app-server handles the model connection; the
+host executes model-chosen Nagi calls through this offline worker. The Codex
+login cache stays with the model host, outside the worker. Other CLIs need
+their own adapters and equivalent enforced tool restrictions.
 Giving an agent a general shell, desktop-control tool or writable host files
 outside this launcher is outside the protected mode. The launcher does not
 retroactively isolate an already-running agent. Host/kernel compromise and
 malicious system binaries are outside this boundary.
+
+## Codex CLI adapter (development preview)
+
+Install Codex CLI, run `codex login` on the same machine, and start Nagi with
+`--agent-control`. Then run:
+
+```sh
+nagi-codex 'Summarise my open tabs and propose putting tabs on the left'
+```
+
+`nagi-codex --model MODEL 'TASK'` chooses a model available to that login. It
+uses the CLI's file-backed `auth.json`; if the login is stored only in an OS
+keyring, this adapter currently exits without a fallback. It copies the cache
+into a mode-0700 temporary home for one task and deletes the copy on exit. The
+user's normal Codex configuration, plugins and session files are not loaded.
+The model host receives no desktop environment variables or runtime socket.
+Model-generated commands get a restricted, read-only Codex sandbox with only
+an empty task directory as a readable root. Codex permission escalation is
+always refused. All browser calls are allowlisted and executed by `agent-run`
+inside the separate bubblewrap boundary. Model text cannot invoke an approval
+method, shell command or arbitrary host executable through the adapter.
+
+The adapter uses the Codex app-server protocol's `thread/start`, `turn/start`,
+`outputSchema` and `toolOutput` fields; it bounds each task to 20 model steps
+(at most 30 via `--max-steps`). A proposal remains pending until the owner
+reviews it inside Nagi. Stop in Nagi to invalidate that session. The adapter
+has no built-in login flow and should not be passed an API key or a Codex auth
+file manually. It has not yet been exercised with a signed-in CLI on a real
+Omarchy desktop. The protocol fixture and native browser tests are distinct
+from that required end-to-end acceptance.
 
 ## Proposal protocol
 
@@ -83,9 +115,14 @@ before owner-managed archival. This version has no automatic archive rotation.
   transaction rejection and preservation when the audit exceeds its bound.
 - `tests/agent_sandbox.py`: real bubblewrap execution; host files, environment,
   network, processes and desktop endpoints absent; only the chosen socket works.
+- `tests/codex_adapter.py`: protocol mock checks a signed-in file-cache copy,
+  restricted sandbox request, refused escalation, browser allowlist and
+  host-to-worker dispatch; it makes no model call.
 - `tests/extensions_smoke.py`: proposals from the isolated process, owner
   approval/rejection, exact UI effect, undo, stale revisions, expiry, cancellation,
   revocation, Stop, extension digest changes and unavailable approval methods.
+  A fake Codex app-server also runs through the adapter and real worker to a
+  pending proposal, then the native review updates the visible toolbar.
 - Existing configuration and recovery tests cover competing/interrupted writers.
 
 These are deterministic attacker actions, not a measured model-susceptibility

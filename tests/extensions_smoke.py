@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -162,6 +163,47 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:accessible('back') is None)
         assert cli('config','get','toolbar.actions')==[]
         assert cli('config','get','zoom')==1.2
+        # A fake Codex app-server exercises the entire host -> bwrap -> native
+        # approval route, with no account login or model call in CI.
+        login=pathlib.Path(directory)/'codex-login'
+        login.mkdir()
+        (login/'auth.json').write_text('fixture-only')
+        fake=pathlib.Path(directory)/'fake-codex'
+        proposed=dict(session=session,revision=cli('config','inspect')['revision'],
+                      reason='Fixture Codex host proposal',changes={'toolbar.actions':['back']})
+        action=json.dumps(dict(action='call',method='settings.propose',params=proposed,answer=''))
+        final=json.dumps(dict(action='final',method='',params={},answer='Waiting for native review.'))
+        fake.write_text('''#!/usr/bin/env python3
+import json, os, sys
+assert 'DISPLAY' not in os.environ and 'XDG_RUNTIME_DIR' not in os.environ
+assert open(os.path.join(os.environ['CODEX_HOME'],'auth.json')).read() == 'fixture-only'
+def emit(value): print(json.dumps(value),flush=True)
+step=0
+for line in sys.stdin:
+ msg=json.loads(line)
+ if msg.get('method')=='initialize': emit({'id':msg['id'],'result':{}})
+ elif msg.get('method')=='thread/start': emit({'id':msg['id'],'result':{'thread':{'id':'fixture'}}})
+ elif msg.get('method')=='turn/start':
+  assert msg['params']['sandboxPolicy']['access']['type']=='restricted'
+  emit({'id':msg['id'],'result':{'turn':{'id':str(step)}}})
+  value = %r if step==0 else %r
+  emit({'method':'item/completed','params':{'item':{'type':'agentMessage','phase':'final_answer','text':value}}})
+  emit({'method':'turn/completed','params':{'turn':{'id':str(step),'status':'completed'}}})
+  step+=1
+''' % (action,final))
+        fake.chmod(0o700)
+        result=subprocess.run([sys.executable,str(root/'scripts/nagi_codex.py'),
+                               'Put a back button in my toolbar','--nagi',binary,
+                               '--codex',str(fake)],env=dict(env,CODEX_HOME=str(login)),
+                              capture_output=True,text=True,timeout=45)
+        assert result.returncode==0,result.stdout+result.stderr
+        assert 'Waiting for native review' in result.stdout
+        assert cli('config','get','toolbar.actions')==[]
+        review(); click('Apply proposal')
+        wait(lambda:accessible('back'))
+        assert cli('config','get','toolbar.actions')==['back']
+        cli('config','undo')
+        wait(lambda:accessible('back') is None)
         # Explicit extension proposals bind the approved manifest digest.
         proposal=propose(extension=dict(id='fixture',command='configure'))
         review()

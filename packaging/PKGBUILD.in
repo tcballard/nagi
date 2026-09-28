@@ -8,7 +8,7 @@ url='https://github.com/tcballard/nagi'
 license=('MIT')
 depends=('gtk4' 'webkitgtk-6.0')
 makedepends=('rust' 'pkgconf')
-optdepends=('gst-libav: additional media codecs' 'gst-plugins-good: media playback' 'gst-plugins-bad: additional media formats' 'xdg-desktop-portal: desktop file dialogs')
+optdepends=('gst-libav: additional media codecs' 'gst-plugins-good: media playback' 'gst-plugins-bad: additional media formats' 'xdg-desktop-portal: desktop file dialogs' 'bubblewrap: isolated agent and Codex browser execution' 'python: nagi-codex adapter')
 source=("nagi-$pkgver.tar.gz")
 sha256sums=('@SHA256@')
 prepare() {
@@ -27,5 +27,3 @@ package() {
   cd "$srcdir/nagi-$pkgver"
   make install DESTDIR="$pkgdir" PREFIX=/usr
 }
-
-optdepends=('bubblewrap: isolated offline agent execution via nagi agent-run')
