@@ -101,6 +101,89 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         subprocess.run(['xdotool','mousemove',str(int(window['X'])+int(window['WIDTH'])-250),str(int(window['Y'])+267),'click','1'],env=env,check=True)
         wait(lambda:cli('config','get','tabs.layout')=='Top')
         assert cli('config','get','zoom')==1.1, 'Undo reverted more than the approved transaction'
+        # Deterministic hostile-agent calls: no tool path carries owner approval.
+        session=cli('browser','capabilities')['session']
+        original=cli('config','get')
+        def propose(changes=None, **extra):
+            payload=dict(session=session, revision=cli('config','inspect')['revision'],
+                         reason='Fixture: put a back action in the toolbar')
+            if changes is not None: payload['changes']=changes
+            payload.update(extra)
+            result=subprocess.run([binary,'agent-run','--','/usr/bin/env','nagi','browser','settings.propose',json.dumps(payload)],
+                                  input='',text=True,capture_output=True,env=env,timeout=25)
+            assert result.returncode==0,result.stdout+result.stderr
+            return json.loads(result.stdout)['result']['proposal']
+        def outcome(proposal, expected):
+            wait(lambda:any(row['proposal']==proposal and row['outcome']==expected
+                            for row in cli('config','inspect')['audit']))
+        def review():
+            click('Review agent change')
+            wait(lambda:accessible('Apply proposal'))
+        proposal=propose({'toolbar.actions':['back']})
+        for method in ['settings.approve','settings.apply','config.set','profile.apply']:
+            cli('browser',method,json.dumps(dict(proposal=proposal,approved=True)),ok=False)
+        assert cli('config','get')==original
+        review(); click('Reject proposal')
+        outcome(proposal,'rejected')
+        assert cli('config','get')==original
+        assert cli('browser','settings.status',json.dumps(dict(proposal=proposal)))['result']['last_outcome']['outcome']=='rejected'
+        proposal=propose({'toolbar.actions':['back']})
+        review()
+        cli('config','set','zoom','1.2')
+        click('Apply proposal')
+        outcome(proposal,'failed')
+        assert cli('config','get','toolbar.actions')==[]
+        assert cli('config','get','zoom')==1.2
+        assert cli('config','inspect')['audit'][-1]['outcome']=='failed'
+        proposal=propose({'toolbar.actions':['back']},ttl_seconds=1)
+        review()
+        wait(lambda:cli('browser','settings.status')['result']['pending'] is None)
+        click('Apply proposal')
+        assert cli('config','get','toolbar.actions')==[]
+        proposal=propose({'toolbar.actions':['back']})
+        review()
+        cli('browser','settings.cancel',json.dumps(dict(proposal=proposal)))
+        click('Apply proposal')
+        assert cli('config','get','toolbar.actions')==[]
+        proposal=propose({'toolbar.actions':['back']})
+        review()
+        cli('browser','revoke',json.dumps(dict(origin=origin)))
+        click('Apply proposal')
+        assert cli('config','get','toolbar.actions')==[]
+        proposal=propose({'toolbar.actions':['back']})
+        review(); click('Apply proposal')
+        wait(lambda:accessible('back'))  # application UI, independently of disk
+        assert cli('config','get','toolbar.actions')==['back']
+        audit=cli('config','inspect')['audit']
+        assert audit[-1]['proposal']==proposal and audit[-1]['outcome']=='applied'
+        assert audit[-1]['to_revision']==audit[-1]['from_revision']+1
+        cli('browser','settings.approve',json.dumps(dict(proposal=proposal)),ok=False)
+        cli('config','undo')
+        wait(lambda:accessible('back') is None)
+        assert cli('config','get','toolbar.actions')==[]
+        assert cli('config','get','zoom')==1.2
+        # Explicit extension proposals bind the approved manifest digest.
+        proposal=propose(extension=dict(id='fixture',command='configure'))
+        review()
+        manifest['description']='Changed after proposal'
+        cli('extension','install',input=json.dumps(manifest))
+        click('Apply proposal')
+        outcome(proposal,'failed')
+        assert cli('config','get','tabs.layout')=='Top'
+        # Digest revocation deliberately terminates affected WebKit processes.
+        # Begin the separate site-hook fixture in a fresh browser session.
+        old_session=session
+        app.terminate(); app.wait(timeout=5)
+        app=subprocess.Popen([binary,'--agent-control','--extensions',origin+'/reattach'],env=env,stdout=log,stderr=log)
+        wait(lambda:'/reattach' in requests)
+        session=cli('browser','capabilities')['session']
+        assert session!=old_session
+        refused=cli('browser','settings.propose',json.dumps(dict(session=old_session,
+                    revision=cli('config','inspect')['revision'],reason='Old session replay',
+                    changes={'toolbar.actions':['back']})),ok=False)
+        assert refused['error']=='Stale browser session',refused
+        assert cli('config','get','toolbar.actions')==[]
+        approve()
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
         stdout,stderr=attach.communicate(timeout=20)
@@ -128,6 +211,12 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:not cli('extension','list')[0]['enabled'],seconds=10)
         assert app.poll() is None
         assert cli('browser','capabilities')['result']['api']==1
+        proposal=propose({'toolbar.actions':['back']})
+        review()
+        cli('browser','stop')
+        click('Apply proposal')
+        assert cli('config','get','toolbar.actions')==[]
+        outcome(proposal,'stopped')
         # Safe startup bypasses settings/extensions/control without rewriting them.
         preserved=(pathlib.Path(env['XDG_CONFIG_HOME'])/'nagi/extensions/grants.json').read_bytes()
         app.terminate(); app.wait(timeout=5)

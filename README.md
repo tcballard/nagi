@@ -161,7 +161,7 @@ it is closed. Nagi does not install or overwrite any compositor binding. Older
 Hyprland configurations using `.conf` instead of Lua require their own binding
 syntax. This integration still needs a live Omarchy/Hyprland check.
 
-## Layout and agent configuration (development branch)
+## Layout and agent configuration (development source)
 
 **Settings → Tabs** switches between the default horizontal strip and a left
 sidebar. Drag tabs to reorder them; the arrangement is saved with the session.
@@ -194,13 +194,12 @@ same values. Agents can inspect all values with `nagi config get` before making
 a change. Browser actions remain within Nagi; global Hyprland bindings are
 configured separately.
 
-For the branch under review:
-
-```sh
-git fetch origin feat/agent-config-vertical-tabs
-git switch feat/agent-config-vertical-tabs
-./scripts/install-local.sh
-```
+For agents reading untrusted pages, the development source also provides
+structured settings proposals and an optional isolated offline worker. You
+review exact changes in Nagi and can undo them. See [agent isolation](docs/agent-isolation.md)
+for the execution contract, Bubblewrap dependency, settings schema-2 migration
+and outstanding live acceptance. The owner CLI above retains direct write access;
+an unrestricted agent with host shell/desktop access is outside this boundary.
 
 ## Data and privacy
 

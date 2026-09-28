@@ -198,6 +198,8 @@ impl Browser {
         ));
         let stop_control = gtk::Button::with_label("Stop agent control");
         control_bar.append(&stop_control);
+        let review_proposal = gtk::Button::with_label("Review agent change");
+        control_bar.append(&review_proposal);
         control_bar.set_visible(false);
         root.append(&control_bar);
         let chrome = gtk::Box::new(gtk::Orientation::Vertical, 12);
@@ -376,6 +378,12 @@ impl Browser {
             dirty: Cell::new(false),
             closing: Cell::new(false),
             storage_error: error,
+        });
+        let weak = Rc::downgrade(&b);
+        review_proposal.connect_clicked(move |_| {
+            if let Some(b) = weak.upgrade() {
+                b.review_agent_proposal();
+            }
         });
         let weak = Rc::downgrade(&b);
         stop_control.connect_clicked(move |_| {

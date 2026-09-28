@@ -29,7 +29,7 @@ pub fn change(key: &str, value: &str) -> Result<Settings, String> {
     )
 }
 pub fn schema() -> serde_json::Value {
-    serde_json::json!({"api":1,"schema":1,"settings":{
+    serde_json::json!({"api":1,"schema":2,"settings":{
         "tabs.layout":{"type":"string","enum":["Top","Left"],"default":"Top"},
         "features.link_previews":{"type":"boolean","default":false},
         "search.engine":{"type":"string","enum":["DuckDuckGo","Google","Brave"],"default":"DuckDuckGo"},

@@ -24,6 +24,7 @@ pub struct Pending {
 pub struct Control {
     pub server: Option<Server>,
     pub session: String,
+    pub proposal: Option<crate::proposals::Proposal>,
     pub grants: HashMap<String, bool>,
     pub shared: HashSet<u64>,
     pending: HashMap<String, Pending>,
@@ -35,6 +36,7 @@ impl Default for Control {
     fn default() -> Self {
         Self {
             server: None,
+            proposal: None,
             session: format!("{}-{}", std::process::id(), crate::core::now()),
             grants: HashMap::new(),
             shared: HashSet::new(),
@@ -78,6 +80,7 @@ impl Browser {
                     for request in incoming {
                         b.control_dispatch(request);
                     }
+                    b.expire_agent_proposal();
                     let pending: Vec<_> = b
                         .control
                         .borrow()
@@ -113,6 +116,7 @@ impl Browser {
         }
     }
     pub fn stop_control(&self) {
+        self.discard_agent_proposal("stopped");
         let (server, pending) = {
             let mut state = self.control.borrow_mut();
             state.grants.clear();
@@ -283,6 +287,32 @@ impl Browser {
         }
         let result = (|| -> Result<Option<Value>, String> {
             match method {
+                "settings.schema" => Ok(Some(crate::config::schema())),
+                "settings.inspect" => {
+                    let d = crate::config::document()?;
+                    Ok(Some(json!({"revision":d.revision,"settings":d.settings})))
+                }
+                "settings.propose" => Ok(Some(self.propose_agent_settings(&id, &params)?)),
+                "settings.cancel" => {
+                    let proposal = params.get("proposal").and_then(Value::as_str).ok_or("Supply proposal ID")?;
+                    if self.control.borrow().proposal.as_ref().is_none_or(|p| p.id != proposal) {
+                        return Err("Proposal unavailable".into());
+                    }
+                    self.discard_agent_proposal("cancelled");
+                    Ok(Some(json!({"cancelled":true})))
+                }
+                "settings.status" => {
+                    self.expire_agent_proposal();
+                    let state = self.control.borrow();
+                    let outcome = if let Some(proposal) = params.get("proposal").and_then(Value::as_str) {
+                        if !proposal.starts_with(&format!("{}:", state.session)) {
+                            return Err("Proposal is from another control session".into());
+                        }
+                        crate::config::document()?.audit.into_iter().rev().find(|a| a.proposal == proposal)
+                            .map(|a| json!({"outcome":a.outcome,"revision":a.to_revision}))
+                    } else { None };
+                    Ok(Some(json!({"pending":state.proposal.as_ref().map(|p| &p.id),"last_outcome":outcome})))
+                }
                 "extension.commands" => Ok(Some(json!(crate::extensions::list()
                     .into_iter()
                     .filter_map(Result::ok)
@@ -303,7 +333,7 @@ impl Browser {
                     Ok(Some(json!({"performed":true})))
                 }
                 "capabilities" => Ok(Some(
-                    json!({"api":1,"methods":["extension.commands","extension.run","capabilities","grant","attach","revoke","tabs","open","navigate","close","snapshot","screenshot","click","type","select","scroll","wait","events","cancel","stop"],"private_tabs":false,"arbitrary_javascript":false,"request_limit":10000,"timeout_seconds":15,"access":"per-origin, session only; approve in browser"}),
+                    json!({"api":1,"methods":["settings.schema","settings.inspect","settings.propose","settings.status","settings.cancel","extension.commands","extension.run","capabilities","grant","attach","revoke","tabs","open","navigate","close","snapshot","screenshot","click","type","select","scroll","wait","events","cancel","stop"],"private_tabs":false,"arbitrary_javascript":false,"request_limit":10000,"timeout_seconds":15,"access":"per-origin, session only; approve in browser"}),
                 )),
                 "tabs" => {
                     let ids: Vec<_> = self.control.borrow().shared.iter().copied().collect();
@@ -323,6 +353,7 @@ impl Browser {
                         .and_then(Value::as_str)
                         .and_then(origin)
                         .ok_or("Supply origin")?;
+                    self.discard_agent_proposal("revoked");
                     self.control.borrow_mut().grants.remove(&site);
                     let ids: Vec<_> = self
                         .control

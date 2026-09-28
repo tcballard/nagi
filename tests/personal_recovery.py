@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='nagi-recovery-') as directory:
         if child.poll() is None: child.kill()
         child.wait()
         document=cli('config','inspect')
-        assert document['schema']==1
+        assert document['schema']==2
         assert document['settings']['search']=='Google'
         cli('config','set','zoom','1.0')
 print('personalisation upgrade and interrupted-write recovery passed')
