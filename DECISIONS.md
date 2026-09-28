@@ -104,3 +104,93 @@ GitHub repository access but no shell/build/desktop execution tool. No Rust,
 GTK, packaging, compatibility, repeatability or security tests were run here.
 The v0.0.3 handoff's passing tests are prior evidence, not a new result.
 Real Omarchy runs, one-time human logins and Tom's gate decisions remain required.
+
+## 2026-09-28 — direction after the Cua comparison
+
+Tom confirmed this direction after reviewing Nagi against Cua Driver.
+Prioritise reversible, schema-driven browser personalisation and controlled
+delegation. Generic page automation alone is not sufficient justification for
+asking someone to switch browsers. Demonstrate value through measured tasks.
+
+PRs #8–#11 are merged. Their merge does not complete A1, A2 or A3 and does
+not pass G1 or G2. The 52-site baseline, live switch-log timing and hostile-page
+security acceptance remain outstanding.
+
+### Next implementation: finish A3's authority boundary
+
+The next A3 PR must define the actual agent execution environment and enforce
+the following contract before claiming that human approval protects settings:
+
+- [ ] The browsing agent can submit a bounded settings proposal with a reason,
+  but cannot apply or approve that proposal itself.
+- [ ] The human preview shows the exact keys and old/new values. Approval binds
+  the proposal, settings revision and relevant extension digest; stale or
+  changed proposals require a fresh review.
+- [ ] All persistent settings paths share the same enforcement boundary,
+  including CLI, profiles and extension commands. Direct filesystem access
+  from the isolated browsing agent cannot bypass it.
+- [ ] The agent cannot drive the approval surface through accessibility,
+  synthetic pointer/keyboard input or another desktop-control tool. Define
+  and test a trusted human approval channel; a native GTK dialog alone does
+  not establish human provenance.
+- [ ] Approved changes apply atomically, update the running browser, retain
+  undo, and create a durable audit record with the proposal reason and outcome.
+  Keep browsing content and secrets out of default records.
+- [ ] Stop/revoke invalidates pending proposals and session capabilities.
+  Replayed, expired, changed or cross-session approvals fail without mutation.
+- [ ] Safe mode and recovery remain usable without granting agent authority.
+
+Start with a concrete threat model and smallest enforceable isolation design.
+Document which shell, filesystem, desktop and IPC capabilities are removed.
+An unrestricted process running as the desktop user remains outside the
+claimed boundary; do not describe a same-user socket or advisory policy as
+isolation. Preserve legitimate owner configuration and recovery paths.
+
+### Verification requirements for A3 and subsequent control changes
+
+Adopt independent observation of actual effects:
+
+- [ ] Hostile-page fixtures attempt settings/extension writes, approval
+  activation, CLI/filesystem bypass, replay and stale-proposal substitution.
+- [ ] Read application-owned state after allowed actions. A successful tool
+  response or dispatch acknowledgement alone is insufficient.
+- [ ] For claimed background operations, verify foreground focus, physical
+  cursor and foreground input state alongside the target effect.
+- [ ] Denied actions return a specific refusal and leave protected state
+  unchanged. Do not silently foreground a window or widen an input route.
+- [ ] Retain source revision, environment, fixture state and redacted evidence
+  for each required case. Missing or skipped cases remain unproven.
+- [ ] Complete T4 on real Omarchy, including the existing hour and three novel
+  attacks, before recording G2. CI fixtures cannot replace that sign-off.
+
+### A5/T5 comparison baseline
+
+Include Cua controlling an established browser as the proposed comparator.
+Preflight its exact browser, compositor, driver and input route before freezing
+the comparison: current Cua platform documentation does not establish universal
+Hyprland or WebKitGTK typed-browser support. Record an unsupported baseline
+route as unavailable, never as a successful Nagi comparison.
+
+Retain the existing 50-task approval and G3 thresholds. The task set must cover
+ordinary page work and browser personalisation. Use the same model, task
+instructions, initial data and time budget where feasible. Report first-try
+success, elapsed time, actions, human interventions and recovery/undo outcomes.
+Separate tasks feasible in both products from Nagi-only configuration tasks.
+Count required human approvals honestly; successful personalisation must be
+observed in the live UI and persisted state, then verified through undo.
+
+### Cua interoperability: later decision
+
+After A3/G2 and the comparison evidence, evaluate a narrow adapter for Nagi's
+existing capabilities. It must retain Nagi's grants, private-tab exclusion,
+reference lifetimes, Stop/revoke and human approval boundary. Any fallback to
+desktop control must not let the agent approve its own request. An adapter
+must not introduce unrestricted evaluation, shell access or a parallel settings
+store. This is a future evaluation, not an implemented integration or an
+exception to the feature freeze.
+
+References reviewed on 2026-09-28:
+- https://cua.ai/docs/concepts/browser-targeting-and-background-delivery
+- https://cua.ai/docs/concepts/how-permission-policies-work
+- https://cua.ai/docs/concepts/how-cua-driver-is-validated
+- https://cua.ai/docs/reference/cua-driver/platform-support
