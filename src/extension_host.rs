@@ -221,7 +221,7 @@ impl Browser {
             let Some(b) = weak.upgrade() else {
                 return;
             };
-            let result = (|| -> Result<(), String> {
+            let result = (|| -> Result<crate::core::Settings, String> {
                 let current = extensions::load(&extension_id)?;
                 if !current.enabled || current.digest != digest {
                     return Err("Extension changed since preview; review it again".into());
@@ -251,7 +251,7 @@ impl Browser {
                 Ok(settings) => {
                     b.apply_settings(settings);
                     b.notice("Settings applied; use Settings to undo");
-                },
+                }
                 Err(error) => b.notice(&error),
             }
         });
