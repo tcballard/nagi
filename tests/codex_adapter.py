@@ -160,3 +160,56 @@ for mode in ('proposal', 'forbidden', 'wrong_session'):
         if mode != 'proposal':
             assert not any(method == 'settings.propose' for method, _ in called)
 print('Settings-only dispatch, session binding and proposal-only boundaries passed')
+
+# Stop/close sends SIGTERM: exercise the actual CLI entry point and verify its
+# private authentication copy is removed, using synthetic credentials only.
+import subprocess
+import sys
+import time
+with tempfile.TemporaryDirectory() as temp:
+    base = Path(temp)
+    login = base / 'login'; login.mkdir()
+    (login / 'auth.json').write_text('fixture-only')
+    marker = base / 'started'
+    browser = base / 'fake-nagi'
+    browser.write_text('''#!/usr/bin/env python3
+import json,sys
+method=sys.argv[-2]
+result={'revision':0,'settings':{}} if method=='settings.inspect' else {'settings':{}}
+print(json.dumps({'session':'fixture-session','result':result}))
+''')
+    browser.chmod(0o700)
+    server = base / 'blocking-codex'
+    server.write_text('''#!/usr/bin/env python3
+import json,os,pathlib,sys,time
+for line in sys.stdin:
+ msg=json.loads(line)
+ if msg.get('method')=='initialize':
+  print(json.dumps({'id':msg['id'],'result':{}}),flush=True)
+ elif msg.get('method')=='thread/start':
+  print(json.dumps({'id':msg['id'],'result':{'thread':{'id':'fixture'},'approvalPolicy':'never','activePermissionProfile':{'id':'nagi_browser','extends':None}}}),flush=True)
+ elif msg.get('method')=='turn/start':
+  pathlib.Path(MARKER).write_text(os.environ['CODEX_HOME'])
+  time.sleep(60)
+'''.replace('MARKER', repr(str(marker))))
+    server.chmod(0o700)
+    process = subprocess.Popen([sys.executable, str(root / 'scripts/nagi_codex.py'),
+        '--settings-only', '--nagi', str(browser), '--codex', str(server), 'Move tabs left'],
+        env=dict(os.environ, CODEX_HOME=str(login)), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    try:
+        deadline = time.monotonic() + 10
+        while not marker.exists() and time.monotonic() < deadline:
+            assert process.poll() is None, process.communicate()
+            time.sleep(.05)
+        assert marker.exists(), 'Fixture never reached a model turn'
+        private_home = Path(marker.read_text())
+        assert (private_home / 'auth.json').read_text() == 'fixture-only'
+        process.terminate()
+        process.communicate(timeout=8)
+        assert process.returncode == 130
+        assert not private_home.exists(), 'Cancelled request retained its login copy'
+        assert (login / 'auth.json').read_text() == 'fixture-only'
+    finally:
+        if process.poll() is None:
+            process.kill(); process.communicate()
+print('Cancelled CLI request removes its private login copy')
