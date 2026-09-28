@@ -125,9 +125,21 @@ as a substitute for owner approval.
 
 Manifests (API 1) register up to 16 named commands: open an HTTP(S) URL, show
 an offline sidebar, or apply a validated settings batch. The Extensions panel
-runs these commands; an enabled control session also provides
+runs these commands. An enabled browser-control session can discover and run
+only open/sidebar commands through
 `nagi browser extension.commands` and
-`nagi browser extension.run '{"extension":"research","command":"reading-layout"}'`.
+`nagi browser extension.run '{"extension":"research","command":"sidebar"}'`.
+It cannot run an extension's `configure` command: page-reading access must not
+silently become a persistent settings write. A configure command clicked in the
+native Extensions panel previews each changed setting and requires an explicit
+Apply changes action. Cancellation writes nothing; a concurrent settings change
+invalidates the preview and must be reviewed again. Settings → Undo last settings
+change reverses the most recent settings transaction, including an approved
+extension change when it is still the most recent transaction. This boundary
+does not constrain another same-user process
+with filesystem write access or a shell that can run `nagi config set`; an
+agent with those permissions requires separate isolation before the broader
+agent-control contract can be claimed secure.
 
 Sidebar/new-tab HTML uses an ephemeral WebKit view with restrictive CSP: no
 network, remote frames, form submission, native filesystem or shell bridge.

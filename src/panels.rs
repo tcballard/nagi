@@ -238,6 +238,20 @@ impl Browser {
             }
             "Settings" => {
                 content.append(&label("Personalisation", "heading"));
+                let undo = gtk::Button::with_label("Undo last settings change");
+                let weak = Rc::downgrade(self);
+                undo.connect_clicked(move |_| {
+                    if let Some(b) = weak.upgrade() {
+                        match b.undo_last_preference() {
+                            Ok(()) => {
+                                b.show_panel("Settings");
+                                b.notice("Last settings change undone");
+                            }
+                            Err(error) => b.notice(&error),
+                        }
+                    }
+                });
+                content.append(&undo);
                 let settings = self.state.borrow().settings.clone();
                 for (key, title, value) in [
                     (

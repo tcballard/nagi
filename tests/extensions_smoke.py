@@ -33,7 +33,9 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         assert (result.returncode==0)==ok, result.stdout+result.stderr
         return json.loads(result.stdout if ok else result.stderr)
     manifest = {'api':1,'id':'fixture','name':'Extension fixture','description':'Test-only extension in a disposable profile',
-        'commands':[{'id':'sidebar','label':'Open fixture sidebar','action':{'kind':'sidebar'}}],
+        'commands':[{'id':'sidebar','label':'Open fixture sidebar','action':{'kind':'sidebar'}},
+                    {'id':'configure','label':'Change tab layout',
+                     'action':{'kind':'configure','changes':{'tabs.layout':'Left'}}}],
         'sidebar_html':f'<h2>Offline sidebar</h2><script>fetch("{origin}/leak").catch(()=>{{}})</script>',
         'sites':[{'origin':origin,'script':'document.querySelector("h1").textContent="Extension active";','css':'h1 { color: rgb(1,2,3); }'}],
         'events':[{'kind':'navigation.finished','origin':origin,'message':'Fixture navigation completed'}]}
@@ -69,6 +71,36 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         wait(lambda:cli('extension','list')[0]['enabled'])
     try:
         approve()
+        commands=cli('browser','extension.commands')['result'][0]['commands']
+        assert [command['id'] for command in commands]==['sidebar'], commands
+        assert cli('config','get','tabs.layout')=='Top'
+        denied=cli('browser','extension.run','{"extension":"fixture","command":"configure"}',ok=False)
+        assert 'require native preview' in denied['error'], denied
+        assert cli('config','get','tabs.layout')=='Top'
+        click('Change tab layout')
+        wait(lambda:accessible('Apply changes'))
+        click('Cancel')
+        assert cli('config','get','tabs.layout')=='Top'
+        click('Change tab layout')
+        wait(lambda:accessible('Apply changes'))
+        cli('config','set','zoom','1.1')
+        click('Apply changes')
+        wait(lambda:not accessible('Apply changes'))
+        assert cli('config','get','tabs.layout')=='Top', 'Stale preview applied despite revision conflict'
+        time.sleep(.5)
+        click('Change tab layout')
+        wait(lambda:accessible('Apply changes'))
+        click('Apply changes')
+        wait(lambda:cli('config','get','tabs.layout')=='Left')
+        subprocess.run(['xdotool','key','ctrl+comma'],env=env,check=True)
+        wait(lambda:accessible('Undo last settings change'))
+        window_ids=subprocess.check_output(['xdotool','search','--pid',str(app.pid)],env=env,text=True).splitlines()
+        geometries=[subprocess.check_output(['xdotool','getwindowgeometry','--shell',wid],env=env,text=True) for wid in window_ids]
+        windows=[dict(line.split('=',1) for line in geometry.splitlines() if '=' in line) for geometry in geometries]
+        window=max(windows,key=lambda w:int(w['WIDTH'])*int(w['HEIGHT']))
+        subprocess.run(['xdotool','mousemove',str(int(window['X'])+int(window['WIDTH'])-250),str(int(window['Y'])+267),'click','1'],env=env,check=True)
+        wait(lambda:cli('config','get','tabs.layout')=='Top')
+        assert cli('config','get','zoom')==1.1, 'Undo reverted more than the approved transaction'
         attach=subprocess.Popen([binary,'browser','attach','{}'],env=env,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         click('Allow reading and interaction')
         stdout,stderr=attach.communicate(timeout=20)
