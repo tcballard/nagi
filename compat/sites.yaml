@@ -1,0 +1,1125 @@
+{
+  "sites": [
+    {
+      "id": "github",
+      "url": "https://github.com",
+      "category": "dev",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "gitlab",
+      "url": "https://gitlab.com",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "stackoverflow",
+      "url": "https://stackoverflow.com",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "docs-rs",
+      "url": "https://docs.rs",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "crates",
+      "url": "https://crates.io",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "npm",
+      "url": "https://www.npmjs.com",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "mdn",
+      "url": "https://developer.mozilla.org",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "arch-wiki",
+      "url": "https://wiki.archlinux.org",
+      "category": "dev",
+      "auth_required": false,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "aur",
+      "url": "https://aur.archlinux.org",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "local-dev",
+      "url": "http://127.0.0.1:3000",
+      "category": "dev",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "gmail",
+      "url": "https://mail.google.com",
+      "category": "google",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "calendar",
+      "url": "https://calendar.google.com",
+      "category": "google",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "docs",
+      "url": "https://docs.google.com",
+      "category": "google",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "sheets",
+      "url": "https://sheets.google.com",
+      "category": "google",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "drive",
+      "url": "https://drive.google.com",
+      "category": "google",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "meet",
+      "url": "https://meet.google.com",
+      "category": "google",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "youtube",
+      "url": "https://www.youtube.com",
+      "category": "google",
+      "auth_required": false,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "media_playback",
+          "selector": "video, audio",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "maps",
+      "url": "https://maps.google.com",
+      "category": "google",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "slack",
+      "url": "https://app.slack.com",
+      "category": "communications",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "discord",
+      "url": "https://discord.com/app",
+      "category": "communications",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "whatsapp",
+      "url": "https://web.whatsapp.com",
+      "category": "communications",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "telegram",
+      "url": "https://web.telegram.org",
+      "category": "communications",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "element",
+      "url": "https://app.element.io",
+      "category": "communications",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "zoom",
+      "url": "https://app.zoom.us/wc",
+      "category": "communications",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "linear",
+      "url": "https://linear.app",
+      "category": "work",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "notion",
+      "url": "https://www.notion.so",
+      "category": "work",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "figma",
+      "url": "https://www.figma.com",
+      "category": "work",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "atlassian",
+      "url": "https://YOUR-TENANT.atlassian.net",
+      "category": "work",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "miro",
+      "url": "https://miro.com",
+      "category": "work",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "excalidraw",
+      "url": "https://excalidraw.com",
+      "category": "work",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "claude",
+      "url": "https://claude.ai",
+      "category": "ai",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "chatgpt",
+      "url": "https://chatgpt.com",
+      "category": "ai",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "gemini",
+      "url": "https://gemini.google.com",
+      "category": "ai",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "netflix",
+      "url": "https://www.netflix.com",
+      "category": "media",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        },
+        {
+          "type": "media_playback",
+          "selector": "video, audio",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "spotify",
+      "url": "https://open.spotify.com",
+      "category": "media",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        },
+        {
+          "type": "media_playback",
+          "selector": "video, audio",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "iplayer",
+      "url": "https://www.bbc.co.uk/iplayer",
+      "category": "media",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        },
+        {
+          "type": "media_playback",
+          "selector": "video, audio",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "twitch",
+      "url": "https://www.twitch.tv",
+      "category": "media",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "media_playback",
+          "selector": "video, audio",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "soundcloud",
+      "url": "https://soundcloud.com",
+      "category": "media",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "media_playback",
+          "selector": "video, audio",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "x",
+      "url": "https://x.com",
+      "category": "social",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "reddit",
+      "url": "https://www.reddit.com",
+      "category": "social",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "hackernews",
+      "url": "https://news.ycombinator.com",
+      "category": "social",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "bluesky",
+      "url": "https://bsky.app",
+      "category": "social",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "mastodon",
+      "url": "https://YOUR-INSTANCE.example",
+      "category": "social",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "bbc-news",
+      "url": "https://www.bbc.co.uk/news",
+      "category": "social",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "guardian",
+      "url": "https://www.theguardian.com",
+      "category": "social",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "wikipedia",
+      "url": "https://www.wikipedia.org",
+      "category": "social",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    },
+    {
+      "id": "amazon",
+      "url": "https://www.amazon.co.uk",
+      "category": "commerce",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "paypal",
+      "url": "https://www.paypal.com",
+      "category": "commerce",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "bank",
+      "url": "https://YOUR-BANK.example",
+      "category": "commerce",
+      "auth_required": true,
+      "critical": true,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "cloudflare",
+      "url": "https://dash.cloudflare.com",
+      "category": "infrastructure",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "aws",
+      "url": "https://console.aws.amazon.com",
+      "category": "infrastructure",
+      "auth_required": true,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        },
+        {
+          "type": "auth_persisted",
+          "selector": "[data-nagi-auth-check]",
+          "needs_configuration": true
+        }
+      ]
+    },
+    {
+      "id": "omarchy",
+      "url": "https://omarchy.org",
+      "category": "omarchy",
+      "auth_required": false,
+      "critical": false,
+      "checks": [
+        {
+          "type": "loads"
+        },
+        {
+          "type": "no_blocker_console_errors"
+        },
+        {
+          "type": "renders"
+        }
+      ]
+    }
+  ]
+}

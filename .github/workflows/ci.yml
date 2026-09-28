@@ -29,6 +29,8 @@ jobs:
           cache-on-failure: true
       - name: Validate approved icon pixels
         run: python3 tests/icons.py
+      - name: Validate compatibility inventory and gate arithmetic
+        run: python3 -m unittest discover -s compat -p 'test_*.py'
       - name: Check formatting
         run: |
           mkdir -p target/evidence
@@ -69,6 +71,7 @@ jobs:
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/gui_smoke.py
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/control_smoke.py
           GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/extensions_smoke.py
+          GSK_RENDERER=cairo LIBGL_ALWAYS_SOFTWARE=1 xvfb-run -a -s '-screen 0 1280x900x24' dbus-run-session -- python3 tests/compat_smoke.py
       - name: Compile release
         run: cargo build --locked --release
       - name: Package runnable Linux build
