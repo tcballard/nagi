@@ -174,3 +174,11 @@ settings migration, profile round trips, unsupported fields/schemas, held locks
 and killed writer processes. `tests/extensions_smoke.py` exercises native
 approval, sidebar CSP, site hooks, revocation, a hung extension and safe startup
 under GTK/Xvfb. These are portable CI checks, not a live Omarchy claim.
+
+## 5. Isolated agent proposals (A3)
+
+[Agent isolation and proposals](agent-isolation.md) describes the offline worker,
+owner-only review path, schema-2 audit migration and exact acceptance limits.
+Use this supported execution mode when page-reading agents must not acquire
+persistent configuration authority. General same-user shell access is outside
+that boundary. G2 still needs live Omarchy acceptance.

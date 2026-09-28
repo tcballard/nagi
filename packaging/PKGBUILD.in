@@ -27,3 +27,5 @@ package() {
   cd "$srcdir/nagi-$pkgver"
   make install DESTDIR="$pkgdir" PREFIX=/usr
 }
+
+optdepends=('bubblewrap: isolated offline agent execution via nagi agent-run')

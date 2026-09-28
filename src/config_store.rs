@@ -15,6 +15,18 @@ pub struct Document {
     pub revision: u64,
     pub settings: Settings,
     pub history: Vec<Snapshot>,
+    #[serde(default)]
+    pub audit: Vec<Audit>,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Audit {
+    pub timestamp: u64,
+    pub proposal: String,
+    pub reason: String,
+    pub outcome: String,
+    pub from_revision: u64,
+    pub to_revision: u64,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -25,10 +37,11 @@ pub struct Snapshot {
 impl Document {
     pub fn initial(settings: Settings) -> Self {
         Self {
-            schema: 1,
+            schema: 2,
             revision: 0,
             settings,
             history: vec![],
+            audit: vec![],
         }
     }
 }
@@ -52,7 +65,7 @@ pub fn read(path: &Path) -> Result<Option<Document>, String> {
                 .map_err(|e| format!("Invalid legacy settings; preserved: {e}"))?,
         )
     };
-    if doc.schema != 1 {
+    if !matches!(doc.schema, 1 | 2) {
         return Err("Unsupported settings schema; preserved".into());
     }
     if doc.history.len() > 32 {
@@ -69,6 +82,19 @@ pub fn transact<F>(
     fallback: &Settings,
     expected: Option<u64>,
     dry_run: bool,
+    edit: F,
+) -> Result<Document, String>
+where
+    F: FnOnce(&mut Document) -> Result<(), String>,
+{
+    transact_audited(path, fallback, expected, dry_run, None, edit)
+}
+pub fn transact_audited<F>(
+    path: &Path,
+    fallback: &Settings,
+    expected: Option<u64>,
+    dry_run: bool,
+    record: Option<(&str, &str, &str)>,
     edit: F,
 ) -> Result<Document, String>
 where
@@ -100,15 +126,39 @@ where
     };
     edit(&mut doc)?;
     config::validate(&doc.settings)?;
-    if doc.settings == previous.settings {
+    let changed = doc.settings != previous.settings;
+    if !changed && record.is_none() {
         return Ok(doc);
     }
-    doc.history.push(previous);
-    if doc.history.len() > 32 {
-        doc.history.remove(0);
+    let from_revision = doc.revision;
+    if changed {
+        doc.history.push(previous);
+        if doc.history.len() > 32 {
+            doc.history.remove(0);
+        }
+        doc.revision = doc.revision.checked_add(1).ok_or("Revision exhausted")?;
     }
-    doc.revision = doc.revision.checked_add(1).ok_or("Revision exhausted")?;
     if !dry_run {
+        let (proposal, reason, outcome) =
+            record.unwrap_or(("owner", "Owner configuration transaction", "applied"));
+        doc.audit.push(Audit {
+            timestamp: crate::core::now(),
+            proposal: proposal.into(),
+            reason: reason.into(),
+            outcome: outcome.into(),
+            from_revision,
+            to_revision: doc.revision,
+        });
+        doc.schema = 2;
+        if serde_json::to_vec_pretty(&doc)
+            .map_err(|e| e.to_string())?
+            .len()
+            > 1024 * 1024
+        {
+            return Err(
+                "Settings audit is full; preserve and archive it before further changes".into(),
+            );
+        }
         atomic_json(path, &doc)?;
     }
     Ok(doc)
@@ -140,6 +190,66 @@ pub fn atomic_json(path: &Path, value: &impl Serialize) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn audit_and_settings_are_one_commit_and_v1_migrates() {
+        let dir = std::env::temp_dir().join(format!("nagi-audit-test-{}", std::process::id()));
+        fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("settings.json");
+        fs::write(
+            &path,
+            br#"{"schema":1,"revision":4,"settings":{},"history":[]}"#,
+        )
+        .unwrap();
+        let defaults = Settings::default();
+        let proposed = transact_audited(
+            &path,
+            &defaults,
+            Some(4),
+            false,
+            Some(("session:1", "Read comfortably", "proposed")),
+            |_| Ok(()),
+        )
+        .unwrap();
+        assert_eq!(proposed.schema, 2);
+        assert_eq!(proposed.revision, 4);
+        let applied = transact_audited(
+            &path,
+            &defaults,
+            Some(4),
+            false,
+            Some(("session:1", "Read comfortably", "applied")),
+            |d| config::set(&mut d.settings, "zoom", "1.2"),
+        )
+        .unwrap();
+        let persisted = read(&path).unwrap().unwrap();
+        assert_eq!(persisted.settings, applied.settings);
+        assert_eq!(persisted.audit.len(), 2);
+        assert_eq!(persisted.audit[1].to_revision, 5);
+        assert_eq!(persisted.audit[1].from_revision, 4);
+        let before = fs::read(&path).unwrap();
+        assert!(transact_audited(
+            &path,
+            &defaults,
+            Some(4),
+            false,
+            Some(("session:1", "Replay", "applied")),
+            |_| Ok(())
+        )
+        .is_err());
+        assert_eq!(fs::read(&path).unwrap(), before);
+        let oversized = "x".repeat(1024 * 1024);
+        assert!(transact_audited(
+            &path,
+            &defaults,
+            Some(5),
+            false,
+            Some(("session:2", &oversized, "proposed")),
+            |_| Ok(())
+        )
+        .is_err());
+        assert_eq!(fs::read(&path).unwrap(), before);
+        fs::remove_dir_all(dir).unwrap();
+    }
     #[test]
     fn migration_conflict_dry_run_undo_and_unknown_schema() {
         let dir = std::env::temp_dir().join(format!("nagi-config-test-{}", std::process::id()));
