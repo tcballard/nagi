@@ -655,7 +655,7 @@ impl Browser {
         self.apply_settings(restored.settings);
         Ok(())
     }
-    fn apply_settings(self: &Rc<Self>, next: Settings) {
+    pub(crate) fn apply_settings(self: &Rc<Self>, next: Settings) {
         let previous = self.state.borrow().settings.clone();
         self.state.borrow_mut().settings = next.clone();
         *self.settings_snapshot.borrow_mut() = next.clone();
