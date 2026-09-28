@@ -44,20 +44,42 @@ keyring, this adapter currently exits without a fallback. It copies the cache
 into a mode-0700 temporary home for one task and deletes the copy on exit. The
 user's normal Codex configuration, plugins and session files are not loaded.
 The model host receives no desktop environment variables or runtime socket.
-Model-generated commands get a restricted, read-only Codex sandbox with only
-an empty task directory as a readable root. Codex permission escalation is
+The host installs a named Codex permission profile granting only minimal system
+reads and its empty task directory, with networking disabled for commands. It
+requires the app-server to confirm that profile before any model turn. Shell,
+plugins, apps, browser/desktop tools and subagents are disabled in this host. Codex permission escalation is
 always refused. All browser calls are allowlisted and executed by `agent-run`
 inside the separate bubblewrap boundary. Model text cannot invoke an approval
 method, shell command or arbitrary host executable through the adapter.
 
 The adapter uses the Codex app-server protocol's `thread/start`, `turn/start`,
-`outputSchema` and `toolOutput` fields; it bounds each task to 20 model steps
+and `outputSchema` fields. Browser observations are supplied as explicitly
+untrusted text on subsequent turns; the model's JSON is not a pending native
+tool call. The schema encodes arbitrary method parameters as a JSON string,
+which the host validates and decodes; it bounds each task to 20 model steps
 (at most 30 via `--max-steps`). A proposal remains pending until the owner
 reviews it inside Nagi. Stop in Nagi to invalidate that session. The adapter
 has no built-in login flow and should not be passed an API key or a Codex auth
-file manually. It has not yet been exercised with a signed-in CLI on a real
-Omarchy desktop. The protocol fixture and native browser tests are distinct
-from that required end-to-end acceptance.
+file manually. A signed-in Codex 0.158.0 run on Omarchy has produced a settings proposal with
+the corrected adapter. This does not complete T4 or G2; the protocol fixture,
+native browser checks and full security acceptance remain distinct.
+
+## Request a settings change from Ctrl+L
+
+With Nagi started using `--agent-control`, open the address panel with Ctrl+L,
+type a request such as "put tabs on the left", and click **Ask agent**. Enter
+continues to navigate/search. The request is passed over stdin (not a shell
+command) to the installed sibling `nagi-codex --settings-only` adapter. Only
+the typed request and settings schema/current values are used; no page
+contents or tab history are attached. Unsupported requests get an explanation.
+
+This path makes one model decision and permits only `settings.propose`.
+The trusted host binds the observed settings revision and original session;
+the model cannot select a different revision or session. No change applies
+until the owner uses **Review agent change**. Proposals expire after five
+minutes. One request or pending proposal is allowed at a time. Stop and window
+close terminate the request, clean the ephemeral login copy, and invalidate
+pending proposals. Safe mode refuses agent requests.
 
 ## Proposal protocol
 
