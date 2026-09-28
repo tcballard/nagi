@@ -113,6 +113,9 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
                                   input='',text=True,capture_output=True,env=env,timeout=25)
             assert result.returncode==0,result.stdout+result.stderr
             return json.loads(result.stdout)['result']['proposal']
+        def outcome(proposal, expected):
+            wait(lambda:any(row['proposal']==proposal and row['outcome']==expected
+                            for row in cli('config','inspect')['audit']))
         def review():
             click('Review agent change')
             wait(lambda:accessible('Apply proposal'))
@@ -121,12 +124,14 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
             cli('browser',method,json.dumps(dict(proposal=proposal,approved=True)),ok=False)
         assert cli('config','get')==original
         review(); click('Reject proposal')
+        outcome(proposal,'rejected')
         assert cli('config','get')==original
-        assert cli('config','inspect')['audit'][-1]['outcome']=='rejected'
+        assert cli('browser','settings.status',json.dumps(dict(proposal=proposal)))['result']['last_outcome']['outcome']=='rejected'
         proposal=propose({'toolbar.actions':['back']})
         review()
         cli('config','set','zoom','1.2')
         click('Apply proposal')
+        outcome(proposal,'failed')
         assert cli('config','get','toolbar.actions')==[]
         assert cli('config','get','zoom')==1.2
         assert cli('config','inspect')['audit'][-1]['outcome']=='failed'
@@ -163,6 +168,7 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         manifest['description']='Changed after proposal'
         cli('extension','install',input=json.dumps(manifest))
         click('Apply proposal')
+        outcome(proposal,'failed')
         assert cli('config','get','tabs.layout')=='Top'
         subprocess.run([binary,'--extensions',origin+'/reattach'],env=env,check=True)
         wait(lambda:'/reattach' in requests)
@@ -199,7 +205,7 @@ with tempfile.TemporaryDirectory(prefix='nagi-extensions-') as directory:
         cli('browser','stop')
         click('Apply proposal')
         assert cli('config','get','toolbar.actions')==[]
-        assert cli('config','inspect')['audit'][-1]['outcome']=='stopped'
+        outcome(proposal,'stopped')
         # Safe startup bypasses settings/extensions/control without rewriting them.
         preserved=(pathlib.Path(env['XDG_CONFIG_HOME'])/'nagi/extensions/grants.json').read_bytes()
         app.terminate(); app.wait(timeout=5)
