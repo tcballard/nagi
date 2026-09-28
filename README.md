@@ -204,6 +204,10 @@ git switch feat/agent-config-vertical-tabs
 
 ## Data and privacy
 
+If you switch to another browser while testing, use `nagi log-switch` to record
+why and `nagi log-switch --summary --markdown` for a local weekly report.
+[Switch-log instructions](docs/switch-log.md) include an optional keyboard bind.
+
 - `~/.local/state/nagi/state.json`: tabs, bookmarks, history and hidden selectors.
 - `~/.local/state/nagi/settings.json`: settings shared by the panel and agent CLI.
 - `~/.local/share/nagi/web/`: cookies and website storage managed by WebKit.

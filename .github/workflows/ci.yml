@@ -37,6 +37,22 @@ jobs:
           git diff --exit-code -- src
       - run: cargo test --locked
       - run: cargo build --locked
+      - name: Check switch-log CLI without a desktop
+        run: |
+          export XDG_DATA_HOME="$(mktemp -d)"
+          target/debug/nagi log-switch "GitHub" "login failed"
+          target/debug/nagi log-switch --summary --since 7d --markdown > target/evidence/switch-summary.md
+          python3 - <<'PY'
+          import json, os, pathlib
+          root = pathlib.Path(os.environ['XDG_DATA_HOME'])
+          path = root / 'nagi/switches.jsonl'
+          row = json.loads(path.read_text().strip())
+          assert row['site_or_task'] == 'GitHub'
+          assert row['reason'] == 'login failed'
+          assert row['nagi_version']
+          assert path.stat().st_mode & 0o777 == 0o600
+          assert 'Switches: 1' in pathlib.Path('target/evidence/switch-summary.md').read_text()
+          PY
       - run: python3 tests/config_transactions.py
       - run: python3 tests/extensions_cli.py
       - run: python3 tests/personal_recovery.py
@@ -129,4 +145,3 @@ jobs:
         run: |
           mapfile -d '' files < <(find release-artifacts -type f \( -name '*.pkg.tar.zst' -o -name '*.tar.gz' -o -name '*SHA256SUMS' \) -print0)
           gh release create v0.0.3 --target "$GITHUB_SHA" --prerelease --title "Nagi v0.0.3" --notes-file RELEASE_NOTES.md "${files[@]}"
-

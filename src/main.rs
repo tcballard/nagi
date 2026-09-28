@@ -12,6 +12,7 @@ mod panels;
 mod personal;
 mod storage;
 mod suggestions;
+mod switch_log;
 mod theme;
 mod web;
 use gtk::{gio, prelude::*};
@@ -30,12 +31,15 @@ fn main() -> gtk::glib::ExitCode {
     if args.get(1).is_some_and(|a| a == "profile") {
         return gtk::glib::ExitCode::from(personal::cli(&args[2..]) as u8);
     }
+    if args.get(1).is_some_and(|a| a == "log-switch") {
+        return gtk::glib::ExitCode::from(switch_log::cli(&args[2..]) as u8);
+    }
     if args.iter().any(|a| a == "--version") {
         println!("Nagi {}", core::VERSION);
         return gtk::glib::ExitCode::SUCCESS;
     }
     if args.iter().any(|a| a == "--help") {
-        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [--agent-control] [--safe-mode] [--extensions] [URL ...]\n       nagi --version\n       nagi config schema | inspect | get [key] | set KEY VALUE | apply JSON | undo\n       nagi profile export NAME | check | apply\n       nagi browser METHOD [JSON_PARAMS] [REQUEST_ID]\n       nagi extension schema | list | check | install | disable ID\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
+        println!("Nagi — a quiet native browser for Omarchy\n\nUsage: nagi [--private] [--focus-address] [--agent-control] [--safe-mode] [--extensions] [URL ...]\n       nagi --version\n       nagi config schema | inspect | get [key] | set KEY VALUE | apply JSON | undo\n       nagi profile export NAME | check | apply\n       nagi browser METHOD [JSON_PARAMS] [REQUEST_ID]\n       nagi extension schema | list | check | install | disable ID\n       nagi log-switch [SITE_OR_TASK REASON] | --summary [--since 7d] [--markdown]\n\nCtrl+Alt+L / Ctrl+L floating address bar · Ctrl+T new tab · Ctrl+W close tab\nCtrl+K tabs · Ctrl+H history · Ctrl+B bookmarks · Ctrl+J downloads\nCtrl+Shift+N private tab · Ctrl+Shift+T reopen tab\nCtrl+F find · Ctrl+D bookmark · Ctrl+Shift+R reader\nCtrl+, settings · F11 fullscreen");
         return gtk::glib::ExitCode::SUCCESS;
     }
     let app = gtk::Application::new(
